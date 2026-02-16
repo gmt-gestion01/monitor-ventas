@@ -2,44 +2,78 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT | CONTROL DE HORAS</title>
+    <title>GMT | MONITOR ESTRATÉGICO UNIFICADO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        .bg-main { background: #0f172a; }
+        .tab-active { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         #login-screen { background: #0f172a; display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; z-index: 100; }
     </style>
 </head>
 <body>
 
-    <nav style="background: #0f172a; padding: 12px; display: flex; justify-content: center; gap: 15px; border-bottom: 3px solid #1e293b;">
-        <a href="index.html" style="text-decoration: none; font-size: 11px; font-weight: 900; padding: 10px 20px; border-radius: 8px; background: #334155; color: white;">📊 DASHBOARD HORAS</a>
-        <a href="ventas.html" style="text-decoration: none; font-size: 11px; font-weight: 900; padding: 10px 20px; border-radius: 8px; background: #1e293b; color: #94a3b8;">💰 DASHBOARD VENTAS</a>
-    </nav>
-
     <div id="login-screen">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md text-center">
-            <h2 class="text-2xl font-black text-slate-800 mb-6 uppercase italic">Acceso Dirección</h2>
-            <div class="space-y-4">
-                <input type="password" id="pass" placeholder="Contraseña de Dirección" class="text-center w-full p-4 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="checkLogin()" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl hover:bg-blue-700">INGRESAR</button>
-                <p id="login-err" class="text-red-500 text-xs font-bold hidden">Contraseña incorrecta</p>
-            </div>
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center">
+            <h2 class="text-3xl font-black text-slate-800 mb-2 italic">GMT SISTEMA</h2>
+            <p class="text-slate-400 text-xs font-bold mb-8 uppercase tracking-widest">Acceso Restringido Dirección</p>
+            <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 mb-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-center font-bold">
+            <button onclick="checkLogin()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">INGRESAR</button>
+            <p id="login-err" class="text-red-500 text-xs font-bold mt-4 hidden">⚠️ Contraseña Incorrecta</p>
         </div>
     </div>
 
-    <div id="dashboard-content" class="hidden p-8 max-w-7xl mx-auto">
-        <h1 class="text-4xl font-black text-slate-800 mb-8 uppercase italic text-center">Control de Horas Acumulado</h1>
-        <div id="data-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 class="font-bold text-blue-600 mb-2 uppercase italic">Estado Archivo 01</h3>
-                <p id="status-01" class="text-slate-500 font-bold">Cargando...</p>
+    <div id="main-content" class="hidden min-h-screen">
+        <nav class="bg-[#0f172a] p-4 sticky top-0 z-50 shadow-xl">
+            <div class="max-w-xl mx-auto flex bg-slate-800/50 p-1 rounded-2xl border border-white/10">
+                <button id="btn-horas" onclick="showTab('horas')" class="tab-active flex-1 py-3 rounded-xl font-black text-xs uppercase transition-all">📊 Dashboard Horas</button>
+                <button id="btn-ventas" onclick="showTab('ventas')" class="flex-1 py-3 rounded-xl font-black text-xs uppercase text-slate-400 hover:text-white transition-all">💰 Dashboard Ventas</button>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 class="font-bold text-blue-600 mb-2 uppercase italic">Estado Archivo 02</h3>
-                <p id="status-02" class="text-slate-500 font-bold">Cargando...</p>
+        </nav>
+
+        <div class="p-6 md:p-10 max-w-7xl mx-auto">
+            
+            <div id="tab-horas">
+                <header class="mb-8 text-center md:text-left">
+                    <h1 class="text-4xl font-black text-slate-800 italic uppercase">Control de Horas</h1>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Análisis de Conexión Acumulado</p>
+                </header>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-8 border-t-8 border-blue-600">
+                        <p class="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-tighter">Registros Mes Actual (Data_01)</p>
+                        <div class="flex items-baseline gap-2">
+                            <span id="h_data01" class="text-6xl font-black text-slate-800">...</span>
+                            <span class="text-slate-400 font-bold uppercase text-[10px]">Filas</span>
+                        </div>
+                    </div>
+                    <div class="glass-card p-8 border-t-8 border-indigo-600">
+                        <p class="text-[10px] font-black text-indigo-600 uppercase mb-4 tracking-tighter">Registros Mes Anterior (Data_02)</p>
+                        <div class="flex items-baseline gap-2">
+                            <span id="h_data02" class="text-6xl font-black text-slate-800">...</span>
+                            <span class="text-slate-400 font-bold uppercase text-[10px]">Filas</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <div id="tab-ventas" class="hidden">
+                <header class="mb-8 text-center md:text-left">
+                    <h1 class="text-4xl font-black text-slate-800 italic uppercase">Monitor de Ventas</h1>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Productividad Bruta | Prepago</p>
+                </header>
+                <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-12 rounded-[3rem] shadow-2xl mb-10 text-center relative overflow-hidden">
+                    <div class="relative z-10">
+                        <p class="text-xs font-black uppercase tracking-[0.3em] opacity-80 mb-2">Total Ventas Registradas</p>
+                        <h2 id="v_total" class="text-9xl font-black italic tracking-tighter">0</h2>
+                        <div class="mt-4 inline-block bg-white/20 px-6 py-2 rounded-full text-[10px] font-black uppercase italic">Ventas.csv Sincronizado</div>
+                    </div>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 mb-6 uppercase italic">Productividad por Supervisor</h3>
+                <div id="v_supervisores" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    </div>
+            </div>
+
         </div>
     </div>
 
@@ -47,34 +81,75 @@
         const PASS_AUTH = "Gmt@2026*";
 
         function checkLogin() {
-            const p = document.getElementById('pass').value;
-            if(p === PASS_AUTH) {
+            if(document.getElementById('pass').value === PASS_AUTH) {
                 document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('dashboard-content').classList.remove('hidden');
-                loadAllData();
+                document.getElementById('main-content').classList.remove('hidden');
+                initDataSync();
             } else {
                 document.getElementById('login-err').classList.remove('hidden');
             }
         }
 
-        async function loadAllData() {
-            // Intenta cargar ambos archivos de datos acumulados
-            await fetchFile('data_01.csv', 'status-01');
-            await fetchFile('data_02.csv', 'status-02');
+        function showTab(tab) {
+            const h = document.getElementById('tab-horas');
+            const v = document.getElementById('tab-ventas');
+            const bh = document.getElementById('btn-horas');
+            const bv = document.getElementById('btn-ventas');
+
+            if(tab === 'horas') {
+                h.classList.remove('hidden'); v.classList.add('hidden');
+                bh.className = "tab-active flex-1 py-3 rounded-xl font-black text-xs uppercase transition-all";
+                bv.className = "flex-1 py-3 rounded-xl font-black text-xs uppercase text-slate-400 hover:text-white transition-all";
+            } else {
+                v.classList.remove('hidden'); h.classList.add('hidden');
+                bv.className = "tab-active flex-1 py-3 rounded-xl font-black text-xs uppercase transition-all";
+                bh.className = "flex-1 py-3 rounded-xl font-black text-xs uppercase text-slate-400 hover:text-white transition-all";
+            }
         }
 
-        async function fetchFile(fileName, elementId) {
+        async function initDataSync() {
+            // Vinculación automática con archivos en el mismo repositorio
+            fetchHoras('data_01.csv', 'h_data01');
+            fetchHoras('data_02.csv', 'h_data02');
+            fetchVentas('ventas.csv');
+        }
+
+        async function fetchHoras(file, elementId) {
             try {
-                const response = await fetch(fileName);
-                if (!response.ok) throw new Error("No encontrado");
-                const text = await response.text();
-                const lines = text.split('\n').length - 1;
-                document.getElementById(elementId).innerText = "Registros cargados: " + lines;
-                document.getElementById(elementId).classList.replace('text-slate-500', 'text-emerald-600');
-            } catch (err) {
-                document.getElementById(elementId).innerText = "Error: Asegúrate de que el archivo " + fileName + " esté en GitHub.";
-                document.getElementById(elementId).classList.replace('text-slate-500', 'text-red-500');
-            }
+                const res = await fetch(file);
+                if(!res.ok) throw new Error();
+                const text = await res.text();
+                const count = text.split('\n').filter(l => l.trim() !== "").length - 1;
+                document.getElementById(elementId).innerText = count.toLocaleString();
+            } catch (e) { document.getElementById(elementId).innerText = "0"; }
+        }
+
+        async function fetchVentas(file) {
+            try {
+                const res = await fetch(file);
+                if(!res.ok) throw new Error();
+                const text = await res.text();
+                const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+                const sep = lines[0].includes(';') ? ';' : ',';
+                const data = lines.slice(1).map(l => {
+                    const c = l.split(sep);
+                    return { sup: (c[2] || "S/S").replace(/['"]+/g, '').trim() };
+                });
+
+                document.getElementById('v_total').innerText = data.length.toLocaleString();
+
+                const counts = {};
+                data.forEach(d => counts[d.sup] = (counts[d.sup] || 0) + 1);
+
+                document.getElementById('v_supervisores').innerHTML = Object.entries(counts)
+                    .sort((a,b) => b[1] - a[1])
+                    .map(([sup, val]) => `
+                        <div class="glass-card p-6 text-center">
+                            <p class="text-[9px] font-black text-slate-400 uppercase mb-2 border-b pb-2 tracking-tighter">${sup}</p>
+                            <p class="text-3xl font-black text-slate-800 italic">${val}</p>
+                        </div>
+                    `).join('');
+            } catch (e) { console.error("Error en ventas:", e); }
         }
     </script>
 </body>
