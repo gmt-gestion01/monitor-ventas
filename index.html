@@ -3,82 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT | PORTAL ESTRATÉGICO</title>
+    <title>GMT | SISTEMA INTEGRADO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; }
-        .bg-portal { background: radial-gradient(circle at top right, #1e3a8a 0%, #0f172a 100%); min-height: 100vh; }
-        .card-link { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); transition: all 0.3s ease; cursor: pointer; }
-        .card-link:hover { transform: translateY(-10px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        .tab-active { background: #2563eb; color: white; border-bottom: 4px solid #60a5fa; }
+        .tab-inactive { background: #1e293b; color: #94a3b8; }
+        .tab-inactive:hover { background: #334155; color: white; }
+        iframe { border: none; width: 100%; height: calc(100vh - 64px); }
         #login-overlay { position: fixed; inset: 0; z-index: 100; background: #0f172a; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
-<body class="bg-portal">
+<body class="overflow-hidden">
 
     <div id="login-overlay">
-        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md">
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-slate-800">
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black italic tracking-tighter text-slate-800">GMT <span class="text-blue-600 text-3xl">ACCESO</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Personal Autorizado</p>
+                <h1 class="text-4xl font-black italic tracking-tighter">GMT <span class="text-blue-600">CENTRAL</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Acceso a Dashboards 2026</p>
             </div>
             <div class="space-y-4">
-                <input type="text" id="user" placeholder="USUARIO" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold uppercase">
-                <input type="password" id="pass" placeholder="CONTRASEÑA" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold">
-                <button onclick="validaEntrada()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">ENTRAR</button>
-                <p id="err-msg" class="text-red-500 text-xs font-bold text-center hidden italic mt-2">Datos incorrectos</p>
+                <input type="text" id="user" placeholder="USUARIO" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase">
+                <input type="password" id="pass" placeholder="CONTRASEÑA" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+                <button onclick="login()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg">INGRESAR AL MONITOR</button>
+                <p id="err" class="text-red-500 text-xs font-bold text-center hidden italic mt-2">Credenciales incorrectas</p>
             </div>
         </div>
     </div>
 
-    <div id="main-content" class="hidden max-w-6xl mx-auto px-6 py-24">
-        <header class="text-center mb-20">
-            <h1 class="text-7xl font-black tracking-tighter uppercase italic py-2">
-                <span class="text-blue-500">GMT</span> <span class="text-white">ESTRATÉGICO</span>
-            </h1>
-            <p class="text-slate-400 font-bold text-xs uppercase tracking-[0.5em] mt-4">Panel Maestro de Control</p>
-        </header>
+    <div id="app-content" class="hidden h-screen flex flex-col">
+        <nav class="h-16 flex bg-slate-900 border-b border-slate-800">
+            <button id="btn-horas" onclick="switchTab('horas')" class="flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-active">
+                📊 Monitor Horas
+            </button>
+            <button id="btn-ventas" onclick="switchTab('ventas')" class="flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-inactive">
+                💰 Monitor Ventas
+            </button>
+            <button onclick="logout()" class="px-6 bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white transition-all text-[10px] font-bold">
+                SALIR
+            </button>
+        </nav>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div onclick="window.location.href='horas.html'" class="card-link p-12 rounded-[3rem] group">
-                <div class="text-center">
-                    <div class="text-6xl mb-6">📊</div>
-                    <h2 class="text-3xl font-black italic mb-4">MONITOR HORAS</h2>
-                    <p class="text-slate-400 text-sm mb-8">Conexiones, inactividad y métricas de data_01/02.</p>
-                    <span class="bg-blue-600 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest">Ver Dashboard</span>
-                </div>
-            </div>
-
-            <div onclick="window.location.href='ventas.html'" class="card-link p-12 rounded-[3rem] group">
-                <div class="text-center">
-                    <div class="text-6xl mb-6">💰</div>
-                    <h2 class="text-3xl font-black italic mb-4">MONITOR VENTAS</h2>
-                    <p class="text-slate-400 text-sm mb-8">Metas, cumplimiento y activaciones de ventas.csv.</p>
-                    <span class="bg-emerald-600 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest">Ver Dashboard</span>
-                </div>
-            </div>
-        </div>
+        <main class="flex-grow bg-white">
+            <iframe id="viewer" src="horas.html"></iframe>
+        </main>
     </div>
 
     <script>
-        const U = "DIRECCION";
-        const P = "Gmt@2026*";
+        const U_MASTER = "DIRECCION";
+        const P_MASTER = "Gmt@2026*";
 
-        function validaEntrada() {
-            const user = document.getElementById('user').value.toUpperCase();
-            const pass = document.getElementById('pass').value;
-            if(user === U && pass === P) {
+        function login() {
+            const u = document.getElementById('user').value.toUpperCase();
+            const p = document.getElementById('pass').value;
+            
+            if(u === U_MASTER && p === P_MASTER) {
                 document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('main-content').classList.remove('hidden');
-                sessionStorage.setItem('gmt_auth', 'true');
+                document.getElementById('app-content').classList.remove('hidden');
+                sessionStorage.setItem('gmt_logged', 'true');
             } else {
-                document.getElementById('err-msg').classList.remove('hidden');
+                document.getElementById('err').classList.remove('hidden');
             }
         }
 
-        if(sessionStorage.getItem('gmt_auth') === 'true') {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('main-content').classList.remove('hidden');
+        function switchTab(dashboard) {
+            const viewer = document.getElementById('viewer');
+            const btnHoras = document.getElementById('btn-horas');
+            const btnVentas = document.getElementById('btn-ventas');
+
+            if(dashboard === 'horas') {
+                viewer.src = 'horas.html';
+                btnHoras.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-active";
+                btnVentas.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-inactive";
+            } else {
+                viewer.src = 'ventas.html';
+                btnVentas.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-active";
+                btnHoras.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-inactive";
+            }
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.reload();
+        }
+
+        // Auto-login si ya tiene sesión
+        window.onload = () => {
+            if(sessionStorage.getItem('gmt_logged') === 'true') {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('app-content').classList.remove('hidden');
+            }
         }
     </script>
 </body>
