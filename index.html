@@ -2,96 +2,83 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT | SISTEMA ESTRATÉGICO</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMT | PORTAL ESTRATÉGICO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .bg-gradient-main { background: radial-gradient(circle at top right, #1e3a8a 0%, #0f172a 100%); }
-        .card-portal { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); transition: all 0.3s ease; }
-        .card-portal:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; }
+        .bg-portal { background: radial-gradient(circle at top right, #1e3a8a 0%, #0f172a 100%); min-height: 100vh; }
+        .card-link { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); transition: all 0.3s ease; cursor: pointer; }
+        .card-link:hover { transform: translateY(-10px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
         #login-overlay { position: fixed; inset: 0; z-index: 100; background: #0f172a; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
-<body class="bg-gradient-main min-h-screen">
+<body class="bg-portal">
 
     <div id="login-overlay">
         <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md">
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black italic tracking-tighter text-slate-800">
-                    <span class="text-orange-500">GMT</span> ACCESO
-                </h1>
+                <h1 class="text-4xl font-black italic tracking-tighter text-slate-800">GMT <span class="text-blue-600 text-3xl">ACCESO</span></h1>
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Personal Autorizado</p>
             </div>
             <div class="space-y-4">
-                <input type="text" id="user" placeholder="Usuario" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold">
-                <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold">
-                <button onclick="checkAuth()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">INGRESAR AL SISTEMA</button>
-                <p id="login-err" class="text-red-500 text-xs font-bold text-center hidden italic">Credenciales incorrectas</p>
+                <input type="text" id="user" placeholder="USUARIO" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold uppercase">
+                <input type="password" id="pass" placeholder="CONTRASEÑA" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold">
+                <button onclick="validaEntrada()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">ENTRAR</button>
+                <p id="err-msg" class="text-red-500 text-xs font-bold text-center hidden italic mt-2">Datos incorrectos</p>
             </div>
         </div>
     </div>
 
-    <div id="portal-content" class="hidden max-w-6xl mx-auto px-6 py-20">
+    <div id="main-content" class="hidden max-w-6xl mx-auto px-6 py-24">
         <header class="text-center mb-20">
             <h1 class="text-7xl font-black tracking-tighter uppercase italic py-2">
-                <span style="background: linear-gradient(180deg, #ff9d42 0%, #ff6b00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">GMT</span>
-                <span style="background: linear-gradient(180deg, #58a5ff 0%, #0056ce 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ESTRATÉGICO</span>
+                <span class="text-blue-500">GMT</span> <span class="text-white">ESTRATÉGICO</span>
             </h1>
-            <p class="text-blue-400 font-bold text-xs uppercase tracking-[0.5em] mt-4">Central de Monitoreo Operativo | 2026</p>
+            <p class="text-slate-400 font-bold text-xs uppercase tracking-[0.5em] mt-4">Panel Maestro de Control</p>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <a href="horas.html" class="card-portal p-12 rounded-[3rem] group">
-                <div class="flex flex-col items-center text-center">
-                    <div class="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">📊</div>
+            <div onclick="window.location.href='horas.html'" class="card-link p-12 rounded-[3rem] group">
+                <div class="text-center">
+                    <div class="text-6xl mb-6">📊</div>
                     <h2 class="text-3xl font-black italic mb-4">MONITOR HORAS</h2>
-                    <p class="text-slate-400 text-sm leading-relaxed">Gestión de conexiones, alertas de inactividad y productividad por ejecutivo.</p>
-                    <div class="mt-8 bg-blue-600/20 text-blue-400 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/30 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                        Entrar al Dashboard
-                    </div>
+                    <p class="text-slate-400 text-sm mb-8">Conexiones, inactividad y métricas de data_01/02.</p>
+                    <span class="bg-blue-600 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest">Ver Dashboard</span>
                 </div>
-            </a>
+            </div>
 
-            <a href="ventas.html" class="card-portal p-12 rounded-[3rem] group">
-                <div class="flex flex-col items-center text-center">
-                    <div class="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">💰</div>
+            <div onclick="window.location.href='ventas.html'" class="card-link p-12 rounded-[3rem] group">
+                <div class="text-center">
+                    <div class="text-6xl mb-6">💰</div>
                     <h2 class="text-3xl font-black italic mb-4">MONITOR VENTAS</h2>
-                    <p class="text-slate-400 text-sm leading-relaxed">Análisis de cumplimiento de metas, KPIs de calidad y ritmo de activaciones.</p>
-                    <div class="mt-8 bg-emerald-600/20 text-emerald-400 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                        Entrar al Dashboard
-                    </div>
+                    <p class="text-slate-400 text-sm mb-8">Metas, cumplimiento y activaciones de ventas.csv.</p>
+                    <span class="bg-emerald-600 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest">Ver Dashboard</span>
                 </div>
-            </a>
+            </div>
         </div>
-
-        <footer class="mt-20 text-center">
-            <p class="text-slate-600 text-[9px] font-black uppercase tracking-[0.3em]">GMT Prepago - Todos los derechos reservados © 2026</p>
-        </footer>
     </div>
 
     <script>
-        const USER_AUTH = "DIRECCION";
-        const PASS_AUTH = "Gmt@2026*";
+        const U = "DIRECCION";
+        const P = "Gmt@2026*";
 
-        function checkAuth() {
-            const u = document.getElementById('user').value;
-            const p = document.getElementById('pass').value;
-            
-            if(u === USER_AUTH && p === PASS_AUTH) {
-                document.getElementById('login-overlay').classList.add('hidden');
-                document.getElementById('portal-content').classList.remove('hidden');
-                // Guardamos sesión simple para que no pida login cada vez mientras la pestaña esté abierta
+        function validaEntrada() {
+            const user = document.getElementById('user').value.toUpperCase();
+            const pass = document.getElementById('pass').value;
+            if(user === U && pass === P) {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-content').classList.remove('hidden');
                 sessionStorage.setItem('gmt_auth', 'true');
             } else {
-                document.getElementById('login-err').classList.remove('hidden');
+                document.getElementById('err-msg').classList.remove('hidden');
             }
         }
 
-        // Revisar si ya estaba logueado
         if(sessionStorage.getItem('gmt_auth') === 'true') {
-            document.getElementById('login-overlay').classList.add('hidden');
-            document.getElementById('portal-content').classList.remove('hidden');
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('main-content').classList.remove('hidden');
         }
     </script>
 </body>
