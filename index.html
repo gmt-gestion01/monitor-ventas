@@ -2,134 +2,96 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT | MONITOR UNIFICADO</title>
+    <title>GMT | SISTEMA ESTRATÉGICO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .glass-card { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; backdrop-filter: blur(10px); }
-        .tab-active { background: #2563eb; color: white; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); }
+        .bg-gradient-main { background: radial-gradient(circle at top right, #1e3a8a 0%, #0f172a 100%); }
+        .card-portal { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); transition: all 0.3s ease; }
+        .card-portal:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        #login-overlay { position: fixed; inset: 0; z-index: 100; background: #0f172a; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
-<body>
+<body class="bg-gradient-main min-h-screen">
 
-    <div id="login-screen" class="fixed inset-0 z-[100] bg-[#0f172a] flex items-center justify-center">
-        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
-            <h2 class="text-2xl font-black text-slate-800 mb-6 uppercase italic">GMT SISTEMA</h2>
-            <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 mb-4 rounded-2xl border border-slate-200 outline-none text-center font-bold text-slate-800 focus:ring-2 focus:ring-blue-500">
-            <button onclick="checkLogin()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all">INGRESAR</button>
-            <p id="login-err" class="text-red-500 text-xs font-bold mt-4 hidden">⚠️ Contraseña Incorrecta</p>
+    <div id="login-overlay">
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-black italic tracking-tighter text-slate-800">
+                    <span class="text-orange-500">GMT</span> ACCESO
+                </h1>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Personal Autorizado</p>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="user" placeholder="Usuario" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold">
+                <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-bold">
+                <button onclick="checkAuth()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">INGRESAR AL SISTEMA</button>
+                <p id="login-err" class="text-red-500 text-xs font-bold text-center hidden italic">Credenciales incorrectas</p>
+            </div>
         </div>
     </div>
 
-    <div id="main-content" class="hidden min-h-screen">
-        <nav class="p-4 bg-slate-900 border-b border-white/10 sticky top-0 z-50">
-            <div class="max-w-md mx-auto flex bg-slate-800 p-1 rounded-2xl border border-white/10 shadow-xl">
-                <button id="btn-horas" onclick="showTab('horas')" class="tab-active flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all">📊 Horas</button>
-                <button id="btn-ventas" onclick="showTab('ventas')" class="flex-1 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500 hover:text-white transition-all">💰 Ventas</button>
-            </div>
-        </nav>
+    <div id="portal-content" class="hidden max-w-6xl mx-auto px-6 py-20">
+        <header class="text-center mb-20">
+            <h1 class="text-7xl font-black tracking-tighter uppercase italic py-2">
+                <span style="background: linear-gradient(180deg, #ff9d42 0%, #ff6b00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">GMT</span>
+                <span style="background: linear-gradient(180deg, #58a5ff 0%, #0056ce 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ESTRATÉGICO</span>
+            </h1>
+            <p class="text-blue-400 font-bold text-xs uppercase tracking-[0.5em] mt-4">Central de Monitoreo Operativo | 2026</p>
+        </header>
 
-        <main class="p-6 max-w-6xl mx-auto w-full">
-            <div id="tab-horas" class="space-y-6">
-                <h1 class="text-3xl font-black italic uppercase">Control de Horas</h1>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="glass-card p-8 border-t-4 border-blue-500">
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2 italic tracking-widest">Registros Enero (data_01)</p>
-                        <span id="h_data01" class="text-6xl font-black italic">...</span>
-                    </div>
-                    <div class="glass-card p-8 border-t-4 border-indigo-500">
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2 italic tracking-widest">Registros Febrero (data_02)</p>
-                        <span id="h_data02" class="text-6xl font-black italic">...</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <a href="horas.html" class="card-portal p-12 rounded-[3rem] group">
+                <div class="flex flex-col items-center text-center">
+                    <div class="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">📊</div>
+                    <h2 class="text-3xl font-black italic mb-4">MONITOR HORAS</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed">Gestión de conexiones, alertas de inactividad y productividad por ejecutivo.</p>
+                    <div class="mt-8 bg-blue-600/20 text-blue-400 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/30 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                        Entrar al Dashboard
                     </div>
                 </div>
-            </div>
+            </a>
 
-            <div id="tab-ventas" class="hidden space-y-6">
-                <h1 class="text-3xl font-black italic uppercase">Productividad Ventas</h1>
-                <div class="bg-gradient-to-br from-emerald-600 to-teal-800 p-12 rounded-[2.5rem] text-center border border-white/20 shadow-2xl">
-                    <p class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-2">Total Ventas Consolidadas</p>
-                    <h2 id="v_total" class="text-9xl font-black italic tracking-tighter">0</h2>
-                </div>
-                <div id="v_supervisores" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="ventas.html" class="card-portal p-12 rounded-[3rem] group">
+                <div class="flex flex-col items-center text-center">
+                    <div class="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">💰</div>
+                    <h2 class="text-3xl font-black italic mb-4">MONITOR VENTAS</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed">Análisis de cumplimiento de metas, KPIs de calidad y ritmo de activaciones.</p>
+                    <div class="mt-8 bg-emerald-600/20 text-emerald-400 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                        Entrar al Dashboard
                     </div>
-            </div>
-        </main>
+                </div>
+            </a>
+        </div>
+
+        <footer class="mt-20 text-center">
+            <p class="text-slate-600 text-[9px] font-black uppercase tracking-[0.3em]">GMT Prepago - Todos los derechos reservados © 2026</p>
+        </footer>
     </div>
 
     <script>
+        const USER_AUTH = "DIRECCION";
         const PASS_AUTH = "Gmt@2026*";
 
-        function checkLogin() {
-            if(document.getElementById('pass').value === PASS_AUTH) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-content').classList.remove('hidden');
-                syncData();
+        function checkAuth() {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+            
+            if(u === USER_AUTH && p === PASS_AUTH) {
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('portal-content').classList.remove('hidden');
+                // Guardamos sesión simple para que no pida login cada vez mientras la pestaña esté abierta
+                sessionStorage.setItem('gmt_auth', 'true');
             } else {
                 document.getElementById('login-err').classList.remove('hidden');
             }
         }
 
-        function showTab(tab) {
-            const h = document.getElementById('tab-horas');
-            const v = document.getElementById('tab-ventas');
-            const bh = document.getElementById('btn-horas');
-            const bv = document.getElementById('btn-ventas');
-
-            h.classList.toggle('hidden', tab !== 'horas');
-            v.classList.toggle('hidden', tab !== 'ventas');
-            
-            bh.className = tab === 'horas' ? "tab-active flex-1 py-3 rounded-xl font-black text-[10px] uppercase" : "flex-1 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500";
-            bv.className = tab === 'ventas' ? "tab-active flex-1 py-3 rounded-xl font-black text-[10px] uppercase" : "flex-1 py-3 rounded-xl font-black text-[10px] uppercase text-slate-500";
-        }
-
-        async function syncData() {
-            // Cargar Horas
-            fetchCSV('data_01.csv', 'h_data01', false);
-            fetchCSV('data_02.csv', 'h_data02', false);
-            // Cargar Ventas
-            fetchCSV('ventas.csv', 'v_total', true);
-        }
-
-        async function fetchCSV(file, elementId, isVentas) {
-            try {
-                const res = await fetch(file);
-                if(!res.ok) throw new Error();
-                const text = await res.text();
-                const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-                
-                if(isVentas) {
-                    procesarVentas(lines);
-                } else {
-                    document.getElementById(elementId).innerText = (lines.length - 1).toLocaleString();
-                }
-            } catch (e) {
-                document.getElementById(elementId).innerText = "!";
-            }
-        }
-
-        function procesarVentas(lines) {
-            document.getElementById('v_total').innerText = (lines.length - 1).toLocaleString();
-            const sep = lines[0].includes(';') ? ';' : ',';
-            
-            // Supervisor está en la 3ra columna (índice 2) según tu archivo ventas.csv
-            const data = lines.slice(1).map(l => {
-                const c = l.split(sep);
-                return (c[2] || "S/S").replace(/['"]+/g, '').trim();
-            }).filter(s => s !== "" && s !== "Supervisor");
-
-            const counts = {};
-            data.forEach(s => counts[s] = (counts[s] || 0) + 1);
-
-            document.getElementById('v_supervisores').innerHTML = Object.entries(counts)
-                .sort((a,b) => b[1] - a[1])
-                .map(([sup, val]) => `
-                    <div class="glass-card p-6 text-center border-b-4 border-emerald-500">
-                        <p class="text-[8px] font-black text-slate-500 uppercase mb-1 tracking-tighter">${sup}</p>
-                        <p class="text-3xl font-black italic">${val}</p>
-                    </div>
-                `).join('');
+        // Revisar si ya estaba logueado
+        if(sessionStorage.getItem('gmt_auth') === 'true') {
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('portal-content').classList.remove('hidden');
         }
     </script>
 </body>
