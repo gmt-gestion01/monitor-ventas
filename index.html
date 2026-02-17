@@ -7,94 +7,103 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; }
-        .tab-active { background: #2563eb; color: white; border-bottom: 4px solid #60a5fa; }
-        .tab-inactive { background: #1e293b; color: #94a3b8; }
-        .tab-inactive:hover { background: #334155; color: white; }
-        iframe { border: none; width: 100%; height: calc(100vh - 64px); }
-        #login-overlay { position: fixed; inset: 0; z-index: 100; background: #0f172a; display: flex; align-items: center; justify-content: center; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
+        
+        /* Estilos de la barra de navegación superior */
+        .nav-header { height: 60px; background: #0f172a; display: flex; border-bottom: 2px solid #1e293b; }
+        .tab-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; font-weight: 900; color: #64748b; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+        .tab-btn.active { background: #1e3a8a; color: white; border-bottom: 3px solid #3b82f6; }
+        .tab-btn:hover:not(.active) { background: #1e293b; color: #f8fafc; }
+
+        /* Contenedor del Dashboard */
+        .content-frame { width: 100%; height: calc(100vh - 60px); border: none; background: white; }
+
+        /* Pantalla de Login (Solo se ve una vez) */
+        #login-screen { position: fixed; inset: 0; z-index: 9999; background: #0f172a; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; padding: 40px; border-radius: 30px; width: 100%; max-width: 380px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
     </style>
 </head>
-<body class="overflow-hidden">
+<body>
 
-    <div id="login-overlay">
-        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-slate-800">
+    <div id="login-screen">
+        <div class="login-card">
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black italic tracking-tighter">GMT <span class="text-blue-600">CENTRAL</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Acceso a Dashboards 2026</p>
+                <h2 class="text-3xl font-black italic text-slate-800 tracking-tighter">GMT <span class="text-blue-600">CENTRAL</span></h2>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Control de Gestión 2026</p>
             </div>
             <div class="space-y-4">
-                <input type="text" id="user" placeholder="USUARIO" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase">
-                <input type="password" id="pass" placeholder="CONTRASEÑA" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold">
-                <button onclick="login()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg">INGRESAR AL MONITOR</button>
-                <p id="err" class="text-red-500 text-xs font-bold text-center hidden italic mt-2">Credenciales incorrectas</p>
+                <input type="text" id="user" placeholder="USUARIO" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase text-slate-700">
+                <input type="password" id="pass" placeholder="CONTRASEÑA" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
+                <button onclick="intentarAcceso()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">ENTRAR AL SISTEMA</button>
+                <p id="error-txt" class="text-red-500 text-xs font-bold text-center hidden italic mt-2">Credenciales incorrectas</p>
             </div>
         </div>
     </div>
 
-    <div id="app-content" class="hidden h-screen flex flex-col">
-        <nav class="h-16 flex bg-slate-900 border-b border-slate-800">
-            <button id="btn-horas" onclick="switchTab('horas')" class="flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-active">
-                📊 Monitor Horas
-            </button>
-            <button id="btn-ventas" onclick="switchTab('ventas')" class="flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-inactive">
-                💰 Monitor Ventas
-            </button>
-            <button onclick="logout()" class="px-6 bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white transition-all text-[10px] font-bold">
-                SALIR
-            </button>
+    <div id="main-app" class="hidden h-screen flex flex-col">
+        <nav class="nav-header">
+            <div id="tab-h" onclick="cambiarModulo('horas')" class="tab-btn active">
+                <span class="text-lg">📊</span> MONITOR HORAS
+            </div>
+            <div id="tab-v" onclick="cambiarModulo('ventas')" class="tab-btn">
+                <span class="text-lg">💰</span> MONITOR VENTAS
+            </div>
+            <div onclick="salir()" class="px-6 flex items-center bg-slate-900 text-red-500 text-[9px] font-black cursor-pointer hover:bg-red-600 hover:text-white transition-all">
+                CERRAR SESIÓN
+            </div>
         </nav>
 
-        <main class="flex-grow bg-white">
-            <iframe id="viewer" src="horas.html"></iframe>
-        </main>
+        <iframe id="dash-viewer" src="horas.html" class="content-frame"></iframe>
     </div>
 
     <script>
-        const U_MASTER = "DIRECCION";
-        const P_MASTER = "Gmt@2026*";
+        const CRED_USER = "DIRECCION";
+        const CRED_PASS = "Gmt@2026*";
 
-        function login() {
-            const u = document.getElementById('user').value.toUpperCase();
-            const p = document.getElementById('pass').value;
-            
-            if(u === U_MASTER && p === P_MASTER) {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('app-content').classList.remove('hidden');
-                sessionStorage.setItem('gmt_logged', 'true');
+        function intentarAcceso() {
+            const u = document.getElementById('user').value.toUpperCase().trim();
+            const p = document.getElementById('pass').value.trim();
+
+            if (u === CRED_USER && p === CRED_PASS) {
+                sessionStorage.setItem('gmt_session', 'active');
+                iniciarSistema();
             } else {
-                document.getElementById('err').classList.remove('hidden');
+                document.getElementById('error-txt').classList.remove('hidden');
             }
         }
 
-        function switchTab(dashboard) {
-            const viewer = document.getElementById('viewer');
-            const btnHoras = document.getElementById('btn-horas');
-            const btnVentas = document.getElementById('btn-ventas');
+        function cambiarModulo(tipo) {
+            const viewer = document.getElementById('dash-viewer');
+            const btnH = document.getElementById('tab-h');
+            const btnV = document.getElementById('tab-v');
 
-            if(dashboard === 'horas') {
-                viewer.src = 'horas.html';
-                btnHoras.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-active";
-                btnVentas.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-inactive";
+            if (tipo === 'horas') {
+                viewer.src = "horas.html";
+                btnH.classList.add('active');
+                btnV.classList.remove('active');
             } else {
-                viewer.src = 'ventas.html';
-                btnVentas.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-active";
-                btnHoras.className = "flex-1 font-black italic text-xs tracking-widest uppercase transition-all tab-inactive";
+                viewer.src = "ventas.html";
+                btnV.classList.add('active');
+                btnH.classList.remove('active');
             }
         }
 
-        function logout() {
-            sessionStorage.clear();
+        function iniciarSistema() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+        }
+
+        function salir() {
+            sessionStorage.removeItem('gmt_session');
             window.location.reload();
         }
 
-        // Auto-login si ya tiene sesión
+        // Revisar si ya entró antes
         window.onload = () => {
-            if(sessionStorage.getItem('gmt_logged') === 'true') {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('app-content').classList.remove('hidden');
+            if (sessionStorage.getItem('gmt_session') === 'active') {
+                iniciarSistema();
             }
-        }
+        };
     </script>
 </body>
 </html>
