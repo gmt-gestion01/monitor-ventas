@@ -3,111 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT | SISTEMA INTEGRADO</title>
+    <title>GMT | PANEL ESTRATÉGICO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body, html { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; height: 100vh; overflow: hidden; }
         
-        /* Contenedor Principal */
-        #app-container { height: 100vh; display: flex; flex-direction: column; }
+        /* Contenedor Maestro */
+        #master-wrapper { height: 100vh; display: flex; flex-direction: column; }
 
-        /* Barra de Navegación Única */
-        .nav-header { height: 65px; background: #0f172a; display: flex; align-items: stretch; border-bottom: 2px solid #1e293b; flex-shrink: 0; }
-        .tab-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; color: #64748b; transition: all 0.3s; text-transform: uppercase; cursor: pointer; border-bottom: 3px solid transparent; }
-        .tab-btn.active { background: #1e3a8a; color: white; border-bottom-color: #3b82f6; }
-        .tab-btn:hover:not(.active) { background: #1e293b; color: #f8fafc; }
+        /* Navegación Superior Única */
+        .top-nav { height: 65px; background: #0f172a; display: flex; border-bottom: 2px solid #1e293b; flex-shrink: 0; }
+        .nav-item { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; font-weight: 900; color: #64748b; transition: all 0.3s; text-transform: uppercase; cursor: pointer; border-bottom: 4px solid transparent; }
+        .nav-item.active { background: #1e3a8a; color: white; border-bottom-color: #3b82f6; }
+        .nav-item:hover:not(.active) { background: #1e293b; color: #f8fafc; }
 
-        /* Visor de Contenido */
-        .viewer-container { flex-grow: 1; position: relative; background: #f8fafc; }
-        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+        /* Área del Dashboard */
+        .dashboard-area { flex-grow: 1; position: relative; background: #ffffff; }
+        #content-frame { width: 100%; height: 100%; border: none; display: block; }
 
-        /* Pantalla de Login */
-        #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0f172a; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: white; padding: 40px; border-radius: 30px; width: 100%; max-width: 380px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        /* Login Overlay */
+        #lock-screen { position: fixed; inset: 0; z-index: 10000; background: #0f172a; display: flex; align-items: center; justify-content: center; }
+        .glass-card { background: white; padding: 40px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-    <div id="login-overlay">
-        <div class="login-card">
+    <div id="lock-screen">
+        <div class="glass-card">
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-black italic text-slate-800 tracking-tighter">GMT <span class="text-blue-600">SISTEMA</span></h2>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Panel Maestro 2026</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Panel de Control 2026</p>
             </div>
             <div class="space-y-4">
-                <input type="text" id="user" placeholder="USUARIO" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase text-slate-700">
-                <input type="password" id="pass" placeholder="CONTRASEÑA" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
-                <button onclick="validarAcceso()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">ENTRAR</button>
-                <p id="msg-error" class="text-red-500 text-xs font-bold text-center hidden italic">Datos incorrectos</p>
+                <input type="text" id="user-field" placeholder="USUARIO" class="w-full p-4 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase text-slate-700">
+                <input type="password" id="pass-field" placeholder="CONTRASEÑA" class="w-full p-4 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
+                <button onclick="accessVerify()" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl hover:bg-blue-700 transition-all">ENTRAR</button>
+                <p id="error-msg" class="text-red-500 text-xs font-bold text-center hidden">Credenciales inválidas</p>
             </div>
         </div>
     </div>
 
-    <div id="app-container" class="hidden">
-        <nav class="nav-header">
-            <div id="btn-horas" onclick="cargar('horas')" class="tab-btn active">
+    <div id="master-wrapper" style="display: none;">
+        <nav class="top-nav">
+            <div id="tab-hours" onclick="switchDash('horas')" class="nav-item active">
                 <span>📊</span> MONITOR HORAS
             </div>
-            <div id="btn-ventas" onclick="cargar('ventas')" class="tab-btn">
+            <div id="tab-sales" onclick="switchDash('ventas')" class="nav-item">
                 <span>💰</span> MONITOR VENTAS
             </div>
         </nav>
-        <main class="viewer-container">
-            <iframe id="main-frame" src=""></iframe>
+        <main class="dashboard-area">
+            <iframe id="content-frame" src="about:blank"></iframe>
         </main>
     </div>
 
     <script>
-        const USER_OK = "DIRECCION";
-        const PASS_OK = "Gmt@2026*";
+        const VALID_U = "DIRECCION";
+        const VALID_P = "Gmt@2026*";
 
-        function validarAcceso() {
-            const u = document.getElementById('user').value.toUpperCase().trim();
-            const p = document.getElementById('pass').value.trim();
+        function accessVerify() {
+            const u = document.getElementById('user-field').value.toUpperCase().trim();
+            const p = document.getElementById('pass-field').value.trim();
 
-            if (u === USER_OK && p === PASS_OK) {
-                sessionStorage.setItem('gmt_auth', 'true');
-                mostrarApp();
+            if (u === VALID_U && p === VALID_P) {
+                sessionStorage.setItem('auth_gmt_2026', 'OK');
+                launchApp();
             } else {
-                document.getElementById('msg-error').classList.remove('hidden');
+                document.getElementById('error-msg').classList.remove('hidden');
             }
         }
 
-        function mostrarApp() {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('app-container').classList.remove('hidden');
-            // Carga inicial limpia
-            cargar('horas');
+        function launchApp() {
+            document.getElementById('lock-screen').style.display = 'none';
+            document.getElementById('master-wrapper').style.display = 'flex';
+            // Carga inicial forzada
+            switchDash('horas');
         }
 
-        function cargar(modulo) {
-            const frame = document.getElementById('main-frame');
-            const bHoras = document.getElementById('btn-horas');
-            const bVentas = document.getElementById('btn-ventas');
+        function switchDash(target) {
+            const frame = document.getElementById('content-frame');
+            const tHours = document.getElementById('tab-hours');
+            const tSales = document.getElementById('tab-sales');
 
-            if (modulo === 'horas') {
+            // Limpiamos clases
+            tHours.classList.remove('active');
+            tSales.classList.remove('active');
+
+            // Cambiamos fuente evitando bucles
+            if (target === 'horas') {
                 frame.src = "horas.html";
-                bHoras.classList.add('active');
-                bVentas.classList.remove('active');
+                tHours.classList.add('active');
             } else {
                 frame.src = "ventas.html";
-                bVentas.classList.add('active');
-                bHoras.classList.remove('active');
+                tSales.classList.add('active');
             }
         }
 
-        // Auto-login si ya existe la sesión
+        // Persistencia de sesión
         window.onload = () => {
-            if (sessionStorage.getItem('gmt_auth') === 'true') {
-                mostrarApp();
+            if (sessionStorage.getItem('auth_gmt_2026') === 'OK') {
+                launchApp();
             }
         };
 
-        // Soporte tecla Enter
+        // Tecla Enter para login
         document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && document.getElementById('app-container').classList.contains('hidden')) {
-                validarAcceso();
+            if (e.key === 'Enter' && document.getElementById('lock-screen').style.display !== 'none') {
+                accessVerify();
             }
         });
     </script>
