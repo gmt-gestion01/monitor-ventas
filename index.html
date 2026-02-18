@@ -7,102 +7,107 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
+        body, html { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; height: 100vh; overflow: hidden; }
         
-        .nav-header { height: 60px; background: #0f172a; display: flex; border-bottom: 2px solid #1e293b; }
-        .tab-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; font-weight: 900; color: #64748b; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
-        .tab-btn.active { background: #1e3a8a; color: white; border-bottom: 3px solid #3b82f6; }
+        /* Contenedor Principal */
+        #app-container { height: 100vh; display: flex; flex-direction: column; }
+
+        /* Barra de Navegación Única */
+        .nav-header { height: 65px; background: #0f172a; display: flex; align-items: stretch; border-bottom: 2px solid #1e293b; flex-shrink: 0; }
+        .tab-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; color: #64748b; transition: all 0.3s; text-transform: uppercase; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { background: #1e3a8a; color: white; border-bottom-color: #3b82f6; }
         .tab-btn:hover:not(.active) { background: #1e293b; color: #f8fafc; }
 
-        .content-frame { width: 100%; height: calc(100vh - 60px); border: none; background: white; }
+        /* Visor de Contenido */
+        .viewer-container { flex-grow: 1; position: relative; background: #f8fafc; }
+        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
 
-        #login-screen { position: fixed; inset: 0; z-index: 9999; background: #0f172a; display: flex; align-items: center; justify-content: center; }
+        /* Pantalla de Login */
+        #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0f172a; display: flex; align-items: center; justify-content: center; }
         .login-card { background: white; padding: 40px; border-radius: 30px; width: 100%; max-width: 380px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-    <div id="login-screen">
+    <div id="login-overlay">
         <div class="login-card">
             <div class="text-center mb-8">
-                <h2 class="text-3xl font-black italic text-slate-800 tracking-tighter">GMT <span class="text-blue-600">CENTRAL</span></h2>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Control de Gestión 2026</p>
+                <h2 class="text-3xl font-black italic text-slate-800 tracking-tighter">GMT <span class="text-blue-600">SISTEMA</span></h2>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Panel Maestro 2026</p>
             </div>
             <div class="space-y-4">
                 <input type="text" id="user" placeholder="USUARIO" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase text-slate-700">
                 <input type="password" id="pass" placeholder="CONTRASEÑA" class="w-full p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
-                <button onclick="intentarAcceso()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">ENTRAR AL SISTEMA</button>
-                <p id="error-txt" class="text-red-500 text-xs font-bold text-center hidden italic mt-2">Credenciales incorrectas</p>
+                <button onclick="validarAcceso()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30">ENTRAR</button>
+                <p id="msg-error" class="text-red-500 text-xs font-bold text-center hidden italic">Datos incorrectos</p>
             </div>
         </div>
     </div>
 
-    <div id="main-app" class="hidden h-screen flex flex-col">
+    <div id="app-container" class="hidden">
         <nav class="nav-header">
-            <div id="tab-h" onclick="cambiarModulo('horas')" class="tab-btn active">
-                <span class="text-lg">📊</span> MONITOR HORAS
+            <div id="btn-horas" onclick="cargar('horas')" class="tab-btn active">
+                <span>📊</span> MONITOR HORAS
             </div>
-            <div id="tab-v" onclick="cambiarModulo('ventas')" class="tab-btn">
-                <span class="text-lg">💰</span> MONITOR VENTAS
+            <div id="btn-ventas" onclick="cargar('ventas')" class="tab-btn">
+                <span>💰</span> MONITOR VENTAS
             </div>
-            </nav>
-
-        <iframe id="dash-viewer" src="about:blank" class="content-frame"></iframe>
+        </nav>
+        <main class="viewer-container">
+            <iframe id="main-frame" src=""></iframe>
+        </main>
     </div>
 
     <script>
-        const CRED_USER = "DIRECCION";
-        const CRED_PASS = "Gmt@2026*";
+        const USER_OK = "DIRECCION";
+        const PASS_OK = "Gmt@2026*";
 
-        function intentarAcceso() {
+        function validarAcceso() {
             const u = document.getElementById('user').value.toUpperCase().trim();
             const p = document.getElementById('pass').value.trim();
 
-            if (u === CRED_USER && p === CRED_PASS) {
-                sessionStorage.setItem('gmt_session', 'active');
-                iniciarSistema();
+            if (u === USER_OK && p === PASS_OK) {
+                sessionStorage.setItem('gmt_auth', 'true');
+                mostrarApp();
             } else {
-                document.getElementById('error-txt').classList.remove('hidden');
+                document.getElementById('msg-error').classList.remove('hidden');
             }
         }
 
-        function iniciarSistema() {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-app').classList.remove('hidden');
-            
-            // Forzamos la carga del primer dashboard al entrar
-            const viewer = document.getElementById('dash-viewer');
-            if (viewer.src === "about:blank" || viewer.src === "") {
-                viewer.src = "horas.html";
-            }
+        function mostrarApp() {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('app-container').classList.remove('hidden');
+            // Carga inicial limpia
+            cargar('horas');
         }
 
-        function cambiarModulo(tipo) {
-            const viewer = document.getElementById('dash-viewer');
-            const btnH = document.getElementById('tab-h');
-            const btnV = document.getElementById('tab-v');
+        function cargar(modulo) {
+            const frame = document.getElementById('main-frame');
+            const bHoras = document.getElementById('btn-horas');
+            const bVentas = document.getElementById('btn-ventas');
 
-            if (tipo === 'horas') {
-                viewer.src = "horas.html";
-                btnH.classList.add('active');
-                btnV.classList.remove('active');
+            if (modulo === 'horas') {
+                frame.src = "horas.html";
+                bHoras.classList.add('active');
+                bVentas.classList.remove('active');
             } else {
-                viewer.src = "ventas.html";
-                btnV.classList.add('active');
-                btnH.classList.remove('active');
+                frame.src = "ventas.html";
+                bVentas.classList.add('active');
+                bHoras.classList.remove('active');
             }
         }
 
+        // Auto-login si ya existe la sesión
         window.onload = () => {
-            if (sessionStorage.getItem('gmt_session') === 'active') {
-                iniciarSistema();
+            if (sessionStorage.getItem('gmt_auth') === 'true') {
+                mostrarApp();
             }
         };
 
-        // Escuchar tecla Enter
+        // Soporte tecla Enter
         document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
-                intentarAcceso();
+            if (e.key === 'Enter' && document.getElementById('app-container').classList.contains('hidden')) {
+                validarAcceso();
             }
         });
     </script>
