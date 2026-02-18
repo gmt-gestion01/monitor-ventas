@@ -15,7 +15,6 @@
         .stat-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
         .flag-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; border: 2px solid rgba(255,255,255,0.2); }
         .sup-card { transition: all 0.2s; border: 1px solid #e2e8f0; border-radius: 2rem; background: white; }
-        #login-screen { background: #0f172a; display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; z-index: 100; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -29,19 +28,7 @@
         </a>
     </nav>
 
-    <div id="login-screen">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md">
-            <h2 class="text-2xl font-black text-slate-800 mb-6 text-center uppercase italic">Acceso Restringido</h2>
-            <div class="space-y-4">
-                <input type="text" id="user" placeholder="Usuario" class="w-full p-4 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="checkLogin()" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl hover:bg-blue-700 transition-all">INGRESAR</button>
-                <p id="login-err" class="text-red-500 text-xs font-bold text-center hidden">Credenciales incorrectas</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="dashboard-content" class="hidden max-w-7xl mx-auto">
+    <div id="dashboard-content" class="max-w-7xl mx-auto">
         <header class="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
             <div class="text-center lg:text-left">
                 <h1 class="text-6xl font-black tracking-tighter uppercase italic py-2">
@@ -96,33 +83,18 @@
     </div>
 
     <script>
-        // LOGIN CONFIG
-        const USER_AUTH = "DIRECCION";
-        const PASS_AUTH = "Gmt@2026*";
+        window.onload = () => {
+            loadDataAutomatic();
+        };
 
-        function checkLogin() {
-            const u = document.getElementById('user').value;
-            const p = document.getElementById('pass').value;
-            if(u === USER_AUTH && p === PASS_AUTH) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('dashboard-content').classList.remove('hidden');
-                loadDataAutomatic(); // Carga el CSV al entrar
-            } else {
-                document.getElementById('login-err').classList.remove('hidden');
-            }
-        }
-
-        // CARGA AUTOMÁTICA DEL ARCHIVO "ventas.csv"
         async function loadDataAutomatic() {
             try {
-                // Buscamos el archivo data.csv en la misma carpeta
                 const response = await fetch('data.csv'); 
                 if (!response.ok) throw new Error("No se encontró data.csv");
                 const csvText = await response.text();
                 processCSV(csvText);
             } catch (err) {
                 console.error("Error al cargar datos:", err);
-                alert("Atención: No se pudo cargar el archivo data.csv desde el servidor.");
             }
         }
 
@@ -181,7 +153,7 @@
                 const v = dSup.length;
                 return `
                     <div class="sup-card p-6">
-                        <p class="text-[11px] font-black text-blue-900 border-b pb-2 mb-4 uppercase italic italic tracking-tighter">${s}</p>
+                        <p class="text-[11px] font-black text-blue-900 border-b pb-2 mb-4 uppercase italic tracking-tighter">${s}</p>
                         <p class="text-3xl font-black text-slate-800 text-center">${v}</p>
                         <div class="grid grid-cols-3 gap-2 mt-4">
                             <div class="bg-blue-50 p-2 rounded-xl text-center"><p class="stat-label text-[6px]">Alta</p><p class="text-[11px] font-black">${Math.round((dSup.filter(x=>x.esAlta).length/v)*100)||0}%</p></div>
