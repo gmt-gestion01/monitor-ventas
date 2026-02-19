@@ -11,143 +11,62 @@
         .spr-high { background-color: #2563eb; color: white; }
         .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #ffffff; color: #cbd5e1; border: 1px solid #e2e8f0; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-50 p-4">
     <div id="dashboard_wrapper" class="max-w-7xl mx-auto">
-        <div class="bg-white p-6 rounded-xl shadow-sm border mb-6 flex flex-wrap justify-between items-center gap-4">
+        
+        <div class="bg-white p-6 rounded-xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-xl font-black uppercase text-slate-900">GMT CONTROL | <span class="text-blue-600">AUDITORÍA</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 uppercase italic">Actualizado: <span id="last_update">--/--</span></p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase italic">Actualizado: <span id="last_update" class="text-blue-600 underline">--/--</span></p>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <select id="filter_month" onchange="cargarArchivoMes(this.value)" class="bg-blue-50 text-blue-700 text-[10px] font-black px-4 py-2 rounded-lg border border-blue-100">
+            <div class="flex flex-wrap justify-center gap-3">
+                <select id="filter_month" onchange="cargarArchivoMes(this.value)" class="bg-blue-50 text-blue-700 text-[10px] font-black px-4 py-2 rounded-lg border border-blue-100 outline-none">
                     <option value="01">ENERO 2026</option>
                     <option value="02" selected>FEBRERO 2026</option>
                 </select>
-                <select id="filter_camp" onchange="renderDashboard()" class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-4 py-2 rounded-lg border border-emerald-100"></select>
-                <select id="filter_ger" onchange="renderDashboard()" class="bg-slate-100 text-slate-700 text-[10px] font-black px-4 py-2 rounded-lg border border-slate-200"></select>
+                <select id="filter_ger" onchange="renderDashboard()" class="bg-slate-100 text-slate-700 text-[10px] font-black px-4 py-2 rounded-lg border border-slate-200 outline-none"></select>
+                <button onclick="generarExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-lg text-[10px] font-black uppercase">📊 EXCEL</button>
+            </div>
+        </div>
+
+        <div id="alerta_panel" class="bg-white border border-red-200 rounded-xl mb-6 overflow-hidden shadow-lg">
+            <div class="bg-red-600 p-3 flex justify-between items-center text-white text-[10px] font-black">
+                <span>⚠️ ALERTAS DE INACTIVIDAD / SIN ESTRUCTURA</span>
+                <input type="text" id="search_user" oninput="renderDashboard()" placeholder="BUSCAR ASESOR..." class="bg-white/20 px-3 py-1 rounded outline-none placeholder-white/70 uppercase text-[9px] w-48">
+            </div>
+            <div class="max-h-64 overflow-y-auto">
+                <table class="w-full text-[10px] text-left border-collapse">
+                    <thead class="bg-slate-100 sticky top-0 uppercase font-bold text-slate-600">
+                        <tr>
+                            <th class="p-3 border-b">Ejecutivo</th>
+                            <th class="p-3 border-b text-center">Días Activos</th>
+                            <th class="p-3 border-b">Horas Totales</th>
+                            <th class="p-3 border-b">Gerencia / Campaña</th>
+                        </tr>
+                    </thead>
+                    <tbody id="t_body_alerts" class="divide-y divide-slate-100 italic"></tbody>
+                </table>
             </div>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-slate-400">TOTAL CONEXIÓN</p><p id="k_tot" class="text-lg font-black text-slate-800">0:00:00</p></div>
-            <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-blue-600">SPRINKLR</p><p id="k_spr" class="text-lg font-black text-blue-600">0:00:00</p></div>
-            <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-orange-600">VICIDIAL</p><p id="k_vic" class="text-lg font-black text-orange-600">0:00:00</p></div>
-            <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-red-500 italic">ALERTAS</p><p id="k_inact" class="text-lg font-black text-red-600">0</p></div>
+            <div class="bg-white p-4 rounded-xl border shadow-sm text-center">
+                <p class="text-[9px] font-bold text-slate-400">ALERTAS TOTALES</p>
+                <p id="k_inact" class="text-2xl font-black text-red-600">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border shadow-sm text-center">
+                <p class="text-[9px] font-bold text-slate-400">TOTAL CONEXIÓN</p>
+                <p id="k_tot" class="text-2xl font-black text-slate-800">00:00</p>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-xl shadow-md border"><div id="g_weekly" style="height: 350px;"></div></div>
-            <div class="bg-white p-6 rounded-xl shadow-md border"><div id="g_bar" style="height: 350px;"></div></div>
-        </div>
-
-        <div id="detail_sections" class="bg-white rounded-xl shadow border overflow-x-auto">
+        <div class="bg-white rounded-xl shadow border overflow-x-auto">
             <table class="w-full text-[10px]">
-                <thead class="bg-slate-100 uppercase font-bold text-slate-600">
-                    <tr><th class="p-3 text-left">Ejecutivo / Sistema</th><th class="p-3 text-left">Calendario de Conexión</th></tr>
-                </thead>
                 <tbody id="t_body_calendar" class="divide-y"></tbody>
             </table>
         </div>
     </div>
-
-    <script>
-        let rawDataFRows = [], globalDates = [], groupedData = {};
-
-        function cargarArchivoMes(numMes) {
-            fetch(`data_${numMes}.csv?v=${Date.now()}`)
-                .then(res => res.text())
-                .then(csv => procesarCSV(csv))
-                .catch(err => console.error(err));
-        }
-
-        function procesarCSV(csvText) {
-            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
-            const sep = lines[0].includes(';') ? ';' : ',';
-            const headers = lines[0].split(sep).map(h => h.trim().toUpperCase());
-            globalDates = headers.slice(9).filter(d => d.includes('/'));
-            if(globalDates.length > 0) document.getElementById('last_update').innerText = globalDates[globalDates.length-1];
-
-            rawDataFRows = []; groupedData = {}; let caps = new Set(), gers = new Set();
-            lines.slice(1).forEach(line => {
-                const c = line.split(sep).map(x => x.replace(/['"]+/g, '').trim());
-                if (c.length < 10) return;
-                const sis = c[0].toUpperCase(), name = c[1], ger = (c[3]||"N/D"), camp = (c[4]||"N/D"), daily = c.slice(9, 9 + globalDates.length);
-                if(camp) caps.add(camp); if(ger) gers.add(ger);
-                rawDataFRows.push({ sis, name, ger, camp, daily });
-                if(!groupedData[name]) groupedData[name] = { name, ger, camp, systems: {} };
-                groupedData[name].systems[sis] = { daily };
-            });
-
-            document.getElementById('filter_camp').innerHTML = '<option value="">TODAS LAS CAMPAÑAS</option>' + [...caps].sort().map(x => `<option value="${x}">${x}</option>`).join('');
-            document.getElementById('filter_ger').innerHTML = '<option value="">TODAS LAS GERENCIAS</option>' + [...gers].sort().map(x => `<option value="${x}">${x}</option>`).join('');
-            renderDashboard();
-        }
-
-        function renderDashboard() {
-            const camp_f = document.getElementById('filter_camp').value;
-            const ger_f = document.getElementById('filter_ger').value;
-            let s_spr = 0, s_vic = 0, sprV = [], vicV = [], labels = [], topCamp = {};
-
-            globalDates.forEach((date, idx) => {
-                labels.push(date.substring(0,5));
-                let dS = 0, dV = 0;
-                rawDataFRows.filter(r => (!camp_f || r.camp === camp_f) && (!ger_f || r.ger === ger_f)).forEach(r => {
-                    const sec = tToSec(r.daily[idx]);
-                    if(r.sis.includes('SPRINKLR')) dS += sec; else dV += sec;
-                    if(!topCamp[r.camp]) topCamp[r.camp] = 0; topCamp[r.camp] += sec;
-                });
-                s_spr += dS; s_vic += dV;
-                sprV.push(parseFloat((dS/3600).toFixed(1)));
-                vicV.push(parseFloat((dV/3600).toFixed(1)));
-            });
-
-            document.getElementById('k_spr').innerText = secToT(s_spr);
-            document.getElementById('k_vic').innerText = secToT(s_vic);
-            document.getElementById('k_tot').innerText = secToT(s_spr + s_vic);
-
-            // Gráfica Evolución
-            Plotly.newPlot('g_weekly', [
-                { x: labels, y: sprV, name: 'Sprinklr', type: 'scatter', mode: 'lines+markers', line: {color: '#2563eb'} },
-                { x: labels, y: vicV, name: 'Vicidial', type: 'scatter', mode: 'lines+markers', line: {color: '#f97316'} }
-            ], { title: 'EVOLUCIÓN DIARIA (HRS)', margin: {t:40, b:40, l:40, r:20} });
-
-            // Gráfica Barras Top Campañas
-            const sortedC = Object.entries(topCamp).sort((a,b)=>b[1]-a[1]).slice(0,8);
-            Plotly.newPlot('g_bar', [{
-                x: sortedC.map(x=>x[0]), y: sortedC.map(x=>(x[1]/3600).toFixed(1)),
-                type: 'bar', marker: {color: '#10b981'}
-            }], { title: 'TOP CAMPAÑAS (HRS)', margin: {t:40, b:40, l:40, r:20} });
-
-            // Tabla de detalle
-            let h = "";
-            const filteredGroup = Object.values(groupedData).filter(u => (!ger_f || u.ger === ger_f) && (!camp_f || u.camp === camp_f));
-            filteredGroup.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d => {
-                h += `<tr class="bg-slate-800 text-white font-bold"><td colspan="2" class="p-2 uppercase text-[9px]">${d.name}</td></tr>`;
-                Object.keys(d.systems).forEach(s => {
-                    const dots = d.systems[s].daily.map((day, i) => {
-                        const sec = tToSec(day);
-                        return `<div class="day-box ${sec>0?(s.includes('SPR')?'spr-high':'vic-high'):'day-off'}">${globalDates[i].split('/')[0]}</div>`;
-                    }).join('');
-                    h += `<tr><td class="p-2 w-32 font-bold text-slate-500">${s}</td><td class="p-2 flex flex-wrap gap-1">${dots}</td></tr>`;
-                });
-            });
-            document.getElementById('t_body_calendar').innerHTML = h;
-        }
-
-        function tToSec(t) {
-            if (!t || t.includes('N/D') || t === "0") return 0;
-            const p = t.split(':');
-            return p.length === 3 ? (+p[0]) * 3600 + (+p[1]) * 60 + (+p[2]) : 0;
-        }
-        function secToT(s) {
-            const h = Math.floor(s/3600);
-            const m = Math.floor((s%3600)/60);
-            return h + ":" + m.toString().padStart(2,'0') + ":" + (s%60).toString().padStart(2,'0');
-        }
-
-        window.onload = () => cargarArchivoMes("02");
-    </script>
-</body>
-</html>
