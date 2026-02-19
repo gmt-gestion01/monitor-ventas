@@ -5,26 +5,41 @@
     <title>GMT | MONITOR VENTAS</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-main-dark { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); }
+        .sup-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; transition: 0.3s; }
+        .sup-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .stat-label { font-size: 0.6rem; font-weight: 900; text-transform: uppercase; color: #94a3b8; }
+    </style>
 </head>
-<body class="bg-slate-50 p-4 md:p-8">
+<body class="bg-slate-50 p-6">
     <div id="dashboard-content" class="max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-10">
-            <h1 class="text-4xl font-black italic text-slate-800">GMT VENTAS</h1>
-            <select id="month_filter" onchange="updateDayFilter()" class="border-2 p-2 rounded-xl text-xs font-black"></select>
-        </div>
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-black italic uppercase tracking-tighter">GMT <span class="text-blue-600">VENTAS</span></h1>
+            <div class="flex gap-2">
+                <select id="month_filter" onchange="updateDayFilter()" class="border-2 p-2 rounded-xl font-bold text-xs"></select>
+                <select id="day_filter" onchange="render()" class="border-2 p-2 rounded-xl font-bold text-xs"></select>
+            </div>
+        </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-white">
-            <div class="bg-blue-800 p-8 rounded-3xl text-center">
-                <p class="text-xs font-bold opacity-70">VENTAS BRUTAS</p>
+        <div class="bg-main-dark rounded-[2.5rem] p-8 mb-8 text-white flex justify-around items-center shadow-2xl">
+            <div class="text-center">
+                <p class="stat-label text-blue-300">Ventas Brutas</p>
                 <h2 id="total_ventas" class="text-6xl font-black">0</h2>
+            </div>
+            <div class="h-16 w-[1px] bg-white/20"></div>
+            <div class="text-center">
+                <p class="stat-label text-blue-300">Con Tráfico</p>
+                <h2 id="perc_traf" class="text-4xl font-black">0%</h2>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-3xl shadow-xl mb-8">
-            <div id="g_tendencia" style="height: 400px;"></div>
+        <div class="bg-white p-6 rounded-3xl border mb-8 shadow-sm">
+            <div id="g_tendencia" style="height: 350px;"></div>
         </div>
 
-        <div id="supervisor_grid" class="grid grid-cols-1 md:grid-cols-4 gap-4"></div>
+        <h3 class="font-black uppercase text-slate-400 text-xs mb-4 ml-2">Monitor por Supervisor</h3>
+        <div id="supervisor_grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
     </div>
 
     <script>
@@ -36,14 +51,18 @@
                 .then(text => {
                     const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
                     const sep = lines[0].includes(';') ? ';' : ',';
+                    const headers = lines[0].split(sep).map(h => h.trim().toUpperCase());
                     
                     globalRawData = lines.slice(1).map(line => {
                         const c = line.split(sep).map(x => x.trim());
                         if(!c[1]) return null;
-                        return { 
-                            fVenta: c[1], 
-                            supervisor: c[2] || "S/S", 
-                            mes: c[9] ? c[9].toLowerCase() : "febrero" 
+                        return {
+                            fVenta: c[1],
+                            supervisor: c[2] || "S/S",
+                            esAlta: c[3] && c[3].toUpperCase() !== "SIN ALTA",
+                            esTrafico: c[6] && c[6].toUpperCase().includes("TRAFICO"),
+                            esEnrolado: c[8] && c[8].toUpperCase().includes("ENROLADO"),
+                            mes: c[9] ? c[9].toLowerCase() : "febrero"
                         };
                     }).filter(d => d !== null);
 
@@ -54,32 +73,46 @@
         }
 
         function updateDayFilter() {
+            const selMes = document.getElementById('month_filter').value;
+            const days = [...new Set(globalRawData.filter(d => d.mes === selMes).map(d => d.fVenta))].sort();
+            document.getElementById('day_filter').innerHTML = '<option value="ALL">TODOS LOS DÍAS</option>' + days.map(d => `<option value="${d}">${d}</option>`).join('');
             render();
         }
 
         function render() {
             const selMes = document.getElementById('month_filter').value;
-            const data = globalRawData.filter(d => d.mes === selMes);
+            const selDia = document.getElementById('day_filter').value;
+            let data = globalRawData.filter(d => d.mes === selMes);
+            if(selDia !== "ALL") data = data.filter(d => d.fVenta === selDia);
+
+            const total = data.length;
+            const traf = data.filter(x => x.esTrafico).length;
             
-            document.getElementById('total_ventas').innerText = data.length;
+            document.getElementById('total_ventas').innerText = total;
+            document.getElementById('perc_traf').innerText = total > 0 ? Math.round((traf/total)*100) + "%" : "0%";
 
-            // Gráfica simple
+            // Gráfica
             const dates = [...new Set(data.map(d => d.fVenta))].sort();
-            const counts = dates.map(dt => data.filter(d => d.fVenta === dt).length);
-
+            const counts = dates.map(dt => data.filter(x => x.fVenta === dt).length);
             Plotly.newPlot('g_tendencia', [{
-                x: dates, y: counts, type: 'scatter', mode: 'lines+markers',
-                line: {color: '#1e3a8a', width: 3}
-            }], { title: 'VENTAS POR DÍA' });
+                x: dates, y: counts, type: 'scatter', mode: 'lines+markers', line: {color: '#1e3a8a'}
+            }], { title: 'TENDENCIA DE VENTAS DIARIAS', margin: {t:40, b:40, l:40, r:20} });
 
             // Supervisores
             const supers = [...new Set(data.map(d => d.supervisor))].sort();
             document.getElementById('supervisor_grid').innerHTML = supers.map(s => {
-                const cant = data.filter(x => x.supervisor === s).length;
-                return `<div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">${s}</p>
-                    <p class="text-2xl font-black text-slate-800">${cant}</p>
-                </div>`;
+                const dSup = data.filter(x => x.supervisor === s);
+                const v = dSup.length;
+                const pAlta = v > 0 ? Math.round((dSup.filter(x=>x.esAlta).length/v)*100) : 0;
+                return `
+                    <div class="sup-card p-6">
+                        <p class="text-[10px] font-black text-blue-900 border-b pb-2 mb-4 uppercase">${s}</p>
+                        <p class="text-3xl font-black text-slate-800 text-center">${v}</p>
+                        <div class="flex justify-between mt-4">
+                            <div class="text-center"><p class="stat-label">Alta</p><p class="text-xs font-bold text-emerald-600">${pAlta}%</p></div>
+                            <div class="text-center"><p class="stat-label">Enrol</p><p class="text-xs font-bold text-blue-600">${v > 0 ? Math.round((dSup.filter(x=>x.esEnrolado).length/v)*100) : 0}%</p></div>
+                        </div>
+                    </div>`;
             }).join('');
         }
 
