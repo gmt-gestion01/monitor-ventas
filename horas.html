@@ -3,172 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <title>GMT CONTROL | AUDITORÍA</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; transition: 0.2s; }
-        .spr-high { background-color: #2563eb; color: white; border: 1px solid #1d4ed8; }
-        .vic-high { background-color: #f97316; color: white; border: 1px solid #ea580c; }
+        .day-box { width: 20px; height: 20px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
+        .spr-high { background-color: #2563eb; color: white; }
+        .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        .table-container { max-height: 500px; overflow-y: auto; scrollbar-width: thin; }
+        #debug-log { font-family: monospace; font-size: 10px; color: #64748b; background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 20px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body class="bg-slate-50 p-4">
-    <div id="dashboard_wrapper" class="max-w-7xl mx-auto">
-        
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:row justify-between items-center gap-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-black text-slate-900 tracking-tighter">GMT <span class="text-blue-600">AUDITORÍA</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Control de Conexión por Gerencia</p>
+                <h1 class="text-2xl font-black text-slate-900">GMT <span class="text-blue-600">AUDITORÍA</span></h1>
+                <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase">Cargando datos...</p>
             </div>
-            <div class="flex gap-2">
-                <select id="filter_ger" onchange="renderDashboard()" class="bg-white border-2 border-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl outline-none focus:border-blue-500"></select>
-                <div class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase">Febrero 2026</div>
-            </div>
+            <select id="filter_ger" onchange="renderDashboard()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl outline-none"></select>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm mb-6">
-            <div class="bg-slate-900 p-4 flex justify-between items-center">
-                <h2 class="text-white text-xs font-black tracking-widest uppercase">⚠️ Alertas de Inactividad (Menos conexión primero)</h2>
-                <input type="text" id="search_user" oninput="renderDashboard()" placeholder="BUSCAR ASESOR..." class="bg-white/10 text-white text-[10px] px-4 py-2 rounded-lg outline-none w-64 placeholder-white/30">
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div class="bg-red-600 p-3 text-white text-[10px] font-black tracking-widest uppercase">
+                ⚠️ Alertas de Inactividad (Menos conexión primero)
             </div>
-            
-            <div class="table-container">
+            <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 sticky top-0 border-b border-slate-200">
+                    <thead class="bg-slate-50 border-b border-slate-200">
                         <tr class="text-[10px] text-slate-400 font-black uppercase">
                             <th class="p-4">Ejecutivo</th>
-                            <th class="p-4 text-center">Días Conectados</th>
-                            <th class="p-4 text-center">Horas Totales</th>
+                            <th class="p-4 text-center">Días Activos</th>
                             <th class="p-4">Gerencia</th>
-                            <th class="p-4">Detalle Diario</th>
+                            <th class="p-4">Calendario</th>
                         </tr>
                     </thead>
-                    <tbody id="t_body_main" class="divide-y divide-slate-100">
-                        </tbody>
+                    <tbody id="t_body_main" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
         </div>
 
-        <div id="loader" class="text-center p-10">
-            <p class="text-slate-400 font-bold animate-pulse uppercase text-xs">Cargando base de datos...</p>
-        </div>
+        <div id="debug-log">Iniciando sistema...</div>
     </div>
 
     <script>
         let rawData = [];
         let dates = [];
 
-        // Función para convertir tiempo HH:MM:SS a segundos
+        function log(msg) {
+            console.log(msg);
+            document.getElementById('debug-log').innerText += "\n> " + msg;
+        }
+
         const tToSec = (t) => {
-            if (!t || t === "0" || t.includes('N/D')) return 0;
+            if (!t || t === "0" || t === "00:00:00" || t.includes('N/D')) return 0;
             const p = t.split(':');
             if (p.length < 2) return 0;
             return (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0));
         };
 
-        // Función para convertir segundos a HH:MM
-        const secToT = (s) => {
-            const h = Math.floor(s / 3600);
-            const m = Math.floor((s % 3600) / 60);
-            return `${h}h ${m}m`;
-        };
-
         async function init() {
             try {
-                const response = await fetch('data_02.csv?v=' + Date.now());
+                log("Buscando archivo data_02.csv...");
+                const response = await fetch('data_02.csv');
+                
+                if (!response.ok) {
+                    throw new Error("No se pudo encontrar el archivo data_02.csv en la carpeta.");
+                }
+
                 const text = await response.text();
                 const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-                
-                // Detectar separador automáticamente
+                log("Archivo leído. Total líneas: " + lines.length);
+
                 const sep = lines[0].includes(';') ? ';' : ',';
                 const headers = lines[0].split(sep);
-                dates = headers.slice(9).filter(h => h.includes('/'));
+                
+                // Detectamos las fechas desde la columna 9
+                dates = headers.slice(9).filter(h => h.includes('/') && h.trim() !== "");
+                log("Fechas detectadas: " + dates.length);
 
-                // Agrupar por asesor (sumar sistemas)
                 const tempMap = {};
-                lines.slice(1).forEach(line => {
+                lines.slice(1).forEach((line, index) => {
                     const c = line.split(sep).map(x => x.replace(/"/g, '').trim());
-                    if (c.length < 10) return;
+                    if (c.length < 5) return;
 
-                    const name = c[1];
-                    const ger = c[3] || "SIN GERENCIA";
-                    const sis = c[0];
-                    const daily = c.slice(9, 9 + dates.length);
+                    const sistema = c[0];
+                    const nombre = c[1];
+                    const gerencia = c[3] || "N/D";
+                    const horasDiarias = c.slice(9, 9 + dates.length);
 
-                    if (!tempMap[name]) {
-                        tempMap[name] = { name, ger, systems: {} };
+                    if (!tempMap[nombre]) {
+                        tempMap[nombre] = { nombre, gerencia, sistemas: {} };
                     }
-                    tempMap[name].systems[sis] = daily;
+                    tempMap[nombre].sistemas[sistema] = horasDiarias;
                 });
 
                 rawData = Object.values(tempMap);
-                
-                // Cargar Gerencias en el filtro
-                const gers = [...new Set(rawData.map(r => r.ger))].sort();
+                log("Usuarios procesados: " + rawData.length);
+
+                const gers = [...new Set(rawData.map(r => r.gerencia))].sort();
                 document.getElementById('filter_ger').innerHTML = '<option value="">TODAS LAS GERENCIAS</option>' + 
                     gers.map(g => `<option value="${g}">${g}</option>`).join('');
 
-                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('status-text').innerText = "DATOS CARGADOS: " + rawData.length + " ASESORES";
                 renderDashboard();
 
             } catch (error) {
-                console.error("Error cargando el archivo:", error);
-                document.getElementById('loader').innerHTML = `<p class="text-red-500 font-bold">Error: No se encontró data_02.csv</p>`;
+                log("ERROR: " + error.message);
+                document.getElementById('status-text').innerText = "ERROR AL CARGAR";
+                document.getElementById('status-text').classList.add('text-red-600');
             }
         }
 
         function renderDashboard() {
             const filterGer = document.getElementById('filter_ger').value;
-            const search = document.getElementById('search_user').value.toUpperCase();
             const tbody = document.getElementById('t_body_main');
 
-            // Procesar métricas por usuario
             let processed = rawData.map(u => {
-                let totalSec = 0;
-                let daysAct = 0;
-                let dailyMatrix = [];
+                let diasActivos = 0;
+                let matriz = [];
 
-                // Sumar todos sus sistemas por día
                 for (let i = 0; i < dates.length; i++) {
-                    let daySec = 0;
-                    let systemType = 'SPR'; // Default
-                    Object.keys(u.systems).forEach(s => {
-                        const sSec = tToSec(u.systems[s][i]);
-                        daySec += sSec;
-                        if (s.includes('VICI')) systemType = 'VIC';
+                    let segundosHoy = 0;
+                    let tipo = 'SPR';
+                    
+                    Object.keys(u.sistemas).forEach(s => {
+                        const sSec = tToSec(u.sistemas[s][i]);
+                        segundosHoy += sSec;
+                        if (s.toUpperCase().includes('VICI')) tipo = 'VIC';
                     });
-                    if (daySec > 0) daysAct++;
-                    totalSec += daySec;
-                    dailyMatrix.push({ sec: daySec, type: systemType, label: dates[i].split('/')[0] });
+
+                    if (segundosHoy > 0) diasActivos++;
+                    matriz.push({ activo: segundosHoy > 0, tipo, label: dates[i].split('/')[0] });
                 }
-                return { ...u, totalSec, daysAct, dailyMatrix };
+                return { ...u, diasActivos, matriz };
             });
 
-            // Aplicar Filtros
-            processed = processed.filter(u => 
-                (!filterGer || u.ger === filterGer) && 
-                (!search || u.name.toUpperCase().includes(search))
-            );
+            // FILTRO
+            if (filterGer) {
+                processed = processed.filter(u => u.gerencia === filterGer);
+            }
 
-            // ORDENAR: De menor a mayor cantidad de días activos (Alertas)
-            processed.sort((a, b) => a.daysAct - b.daysAct);
+            // ORDENAR: Menos días activos arriba
+            processed.sort((a, b) => a.diasActivos - b.diasActivos);
 
-            // Generar HTML
             tbody.innerHTML = processed.map(u => `
                 <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-bold text-slate-700 text-xs uppercase">${u.name}</td>
+                    <td class="p-4 font-bold text-slate-700 text-[11px] uppercase">${u.nombre}</td>
                     <td class="p-4 text-center">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black ${u.daysAct < 5 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
-                            ${u.daysAct} DÍAS
+                        <span class="px-2 py-1 rounded-md text-[9px] font-black ${u.diasActivos < 5 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
+                            ${u.diasActivos} DÍAS
                         </span>
                     </td>
-                    <td class="p-4 text-center font-mono font-bold text-slate-500 text-xs">${secToT(u.totalSec)}</td>
-                    <td class="p-4 text-[10px] font-bold text-slate-400 uppercase">${u.ger}</td>
+                    <td class="p-4 text-[9px] font-bold text-slate-400 uppercase">${u.gerencia}</td>
                     <td class="p-4 flex gap-1 flex-wrap">
-                        ${u.dailyMatrix.map(d => `
-                            <div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" 
-                                 title="${d.label}: ${secToT(d.sec)}">
+                        ${u.matriz.map(d => `
+                            <div class="day-box ${d.activo ? (d.tipo === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}">
                                 ${d.label}
                             </div>
                         `).join('')}
