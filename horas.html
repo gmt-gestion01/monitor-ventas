@@ -1,20 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
-<body class="bg-slate-50 p-6">
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-black text-blue-600 italic">GMT CONTROL | DETALLE DE HORAS</h1>
-            <div class="flex gap-2">
-                <select class="p-2 border rounded"><option>TODAS LAS CAMPAÑAS</option></select>
-                <button class="bg-slate-800 text-white px-4 py-2 rounded font-bold">CARGAR DATA</button>
-            </div>
-        </div>
-        <div class="text-slate-400 italic text-center py-20 border-2 border-dashed rounded">
-            Los datos del archivo data_01.csv se mostrarán aquí.
+<body class="bg-slate-50 p-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h2 class="text-xl font-black text-blue-600 mb-4 italic">DETALLE DE HORAS CONECTADAS</h2>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm" id="tabla-datos">
+                <thead class="bg-slate-100 text-slate-700 uppercase">
+                    <tr id="headers"></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200" id="cuerpo-tabla">
+                    </tbody>
+            </table>
         </div>
     </div>
+
+    <script>
+        // Función para cargar el CSV
+        Papa.parse("data_01.csv", {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const data = results.data;
+                const headersRow = document.getElementById('headers');
+                const cuerpo = document.getElementById('cuerpo-tabla');
+
+                // Generar encabezados
+                Object.keys(data[0]).forEach(key => {
+                    const th = document.createElement('th');
+                    th.className = "p-3 font-bold";
+                    th.innerText = key;
+                    headersRow.appendChild(th);
+                });
+
+                // Generar filas
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    Object.values(row).forEach(val => {
+                        const td = document.createElement('td');
+                        td.className = "p-3 text-slate-600";
+                        td.innerText = val;
+                        tr.appendChild(td);
+                    });
+                    cuerpo.appendChild(tr);
+                });
+            }
+        });
+    </script>
 </body>
 </html>
