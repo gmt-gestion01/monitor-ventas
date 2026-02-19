@@ -2,55 +2,119 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <title>GMT CONTROL | DETALLE DE CONEXION</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .day-box { width: 19px; height: 19px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
+        .spr-high { background-color: #2563eb; color: white; }
+        .vic-high { background-color: #f97316; color: white; }
+        .day-off { background-color: #ffffff; color: #cbd5e1; border: 1px solid #e2e8f0; }
+    </style>
 </head>
-<body class="bg-slate-50 p-4">
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 class="text-xl font-black text-blue-600 mb-4 italic">DETALLE DE HORAS CONECTADAS</h2>
-        
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm" id="tabla-datos">
-                <thead class="bg-slate-100 text-slate-700 uppercase">
-                    <tr id="headers"></tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200" id="cuerpo-tabla">
-                    </tbody>
-            </table>
+<body class="bg-slate-50 p-4 md:p-8">
+    <div id="dashboard_wrapper" class="max-w-7xl mx-auto">
+        <div class="bg-white p-6 rounded-xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-xl font-black uppercase text-slate-900">GMT CONTROL | <span class="text-blue-600">AUDITORÍA</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 uppercase italic">Actualizado al: <span id="last_update" class="text-blue-600 underline">--/--</span></p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-3">
+                <select id="filter_month" onchange="cargarArchivoMes(this.value)" class="bg-blue-50 text-blue-700 text-[10px] font-black px-4 py-2 rounded-lg border border-blue-100 outline-none">
+                    <option value="01">ENERO 2026</option>
+                    <option value="02" selected>FEBRERO 2026</option>
+                </select>
+                <select id="filter_camp" onchange="renderDashboard()" class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-4 py-2 rounded-lg border border-emerald-100 outline-none"></select>
+            </div>
+        </div>
+
+        <div id="main_content">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-slate-400 uppercase">Total Conexión</p><p id="k_tot" class="text-lg font-black text-slate-800">0:00:00</p></div>
+                <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-red-500 uppercase italic">Alertas Staff</p><p id="k_inact" class="text-lg font-black text-red-600">0</p></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border mb-6"><div id="g_weekly" style="height: 380px;"></div></div>
+            <div id="detail_sections"><div class="bg-white rounded-xl shadow border overflow-x-auto"><table class="w-full text-[10px]"><tbody id="t_body_calendar" class="divide-y"></tbody></table></div></div>
         </div>
     </div>
 
     <script>
-        // Función para cargar el CSV
-        Papa.parse("data_01.csv", {
-            download: true,
-            header: true,
-            complete: function(results) {
-                const data = results.data;
-                const headersRow = document.getElementById('headers');
-                const cuerpo = document.getElementById('cuerpo-tabla');
+        let rawDataFRows = [], globalDates = [], groupedData = {};
 
-                // Generar encabezados
-                Object.keys(data[0]).forEach(key => {
-                    const th = document.createElement('th');
-                    th.className = "p-3 font-bold";
-                    th.innerText = key;
-                    headersRow.appendChild(th);
+        function cargarArchivoMes(numMes) {
+            fetch(`data_${numMes}.csv?v=${Date.now()}`)
+                .then(res => res.text())
+                .then(csv => procesarCSV(csv))
+                .catch(err => console.error("Error cargando horas:", err));
+        }
+
+        function procesarCSV(csvText) {
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
+            const sep = lines[0].includes(';') ? ';' : ',';
+            const headers = lines[0].split(sep).map(h => h.trim().toUpperCase());
+            globalDates = headers.slice(9).filter(d => d.includes('/'));
+            
+            rawDataFRows = []; groupedData = {}; let caps = new Set();
+            lines.slice(1).forEach(line => {
+                const c = line.split(sep).map(x => x.replace(/['"]+/g, '').trim());
+                if (c.length < 10) return;
+                const sis = c[0], name = c[1], ger = c[3], camp = c[4], daily = c.slice(9, 9 + globalDates.length);
+                if(camp) caps.add(camp);
+                rawDataFRows.push({ sis, name, ger, camp, daily });
+                if(!groupedData[name]) groupedData[name] = { name, ger, camp, systems: {} };
+                groupedData[name].systems[sis] = { daily };
+            });
+            document.getElementById('filter_camp').innerHTML = '<option value="">CAMPAÑAS</option>' + [...caps].map(x => `<option value="${x}">${x}</option>`).join('');
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            let s_tot = 0;
+            const camp_f = document.getElementById('filter_camp').value;
+            let sprV = [], labels = [];
+
+            globalDates.forEach((date, idx) => {
+                labels.push(date.substring(0,5));
+                let dS = 0;
+                rawDataFRows.filter(r => !camp_f || r.camp === camp_f).forEach(r => {
+                    dS += tToSec(r.daily[idx]);
                 });
+                s_tot += dS;
+                sprV.push(parseFloat((dS/3600).toFixed(1)));
+            });
 
-                // Generar filas
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    Object.values(row).forEach(val => {
-                        const td = document.createElement('td');
-                        td.className = "p-3 text-slate-600";
-                        td.innerText = val;
-                        tr.appendChild(td);
+            document.getElementById('k_tot').innerText = secToT(s_tot);
+            Plotly.newPlot('g_weekly', [{ x: labels, y: sprV, type: 'scatter', mode: 'lines+markers', line: {color: '#2563eb'} }], { title: 'EVOLUCIÓN HORAS' });
+            
+            // Render Calendar simple
+            let h = "";
+            Object.values(groupedData).forEach(d => {
+                h += `<tr><td class="p-2 font-bold">${d.name}</td><td class="flex gap-1">`;
+                Object.values(d.systems).forEach(s => {
+                    s.daily.forEach((day, i) => {
+                        if(tToSec(day) > 0) h += `<div class="day-box spr-high">${globalDates[i].split('/')[0]}</div>`;
                     });
-                    cuerpo.appendChild(tr);
                 });
-            }
-        });
+                h += `</td></tr>`;
+            });
+            document.getElementById('t_body_calendar').innerHTML = h;
+        }
+
+        function tToSec(t) {
+            if (!t || t.includes('N/D') || t === "0") return 0;
+            const p = t.split(':');
+            return p.length === 3 ? (+p[0]) * 3600 + (+p[1]) * 60 + (+p[2]) : 0;
+        }
+
+        function secToT(s) {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            return h + ":" + m.toString().padStart(2, '0') + ":" + (s % 60).toString().padStart(2, '0');
+        }
+
+        // AUTO CARGA AL INICIAR
+        window.onload = () => cargarArchivoMes("02");
     </script>
 </body>
 </html>
