@@ -1,27 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
-<body class="bg-slate-900 p-8">
-    <div class="max-w-7xl mx-auto">
-        <h1 class="text-4xl font-black text-white mb-2 italic">GMT <span class="text-blue-500">PREPAGO</span></h1>
-        <p class="text-blue-300 text-xs font-bold tracking-widest mb-10">ANÁLISIS DE EFICIENCIA | 2026</p>
+<body class="bg-slate-900 p-6">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-black text-white italic mb-8">GMT <span class="text-blue-500">PREPAGO</span></h1>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-blue-900/50 p-8 rounded-3xl border border-blue-500/30 text-center">
-                <h3 class="text-white font-bold text-sm mb-4">VENTAS BRUTAS</h3>
-                <div class="text-6xl font-black text-white">0</div>
+            <div class="bg-blue-900/30 p-10 rounded-3xl border border-blue-500/30 text-center">
+                <p class="text-blue-400 font-bold text-xs mb-2">VENTAS BRUTAS</p>
+                <div id="val-ventas" class="text-6xl font-black text-white">...</div>
             </div>
-            <div class="bg-green-900/50 p-8 rounded-3xl border border-green-500/30 text-center">
-                <h3 class="text-white font-bold text-sm mb-4">META MOVISTAR</h3>
-                <div class="text-6xl font-black text-white">0%</div>
+            <div class="bg-green-900/30 p-10 rounded-3xl border border-green-500/30 text-center">
+                <p class="text-green-400 font-bold text-xs mb-2">META MOVISTAR</p>
+                <div id="val-movistar" class="text-6xl font-black text-white">...</div>
             </div>
-            <div class="bg-orange-900/50 p-8 rounded-3xl border border-orange-500/30 text-center">
-                <h3 class="text-white font-bold text-sm mb-4">META GMT</h3>
-                <div class="text-6xl font-black text-white">0%</div>
+            <div class="bg-orange-900/30 p-10 rounded-3xl border border-orange-500/30 text-center">
+                <p class="text-orange-400 font-bold text-xs mb-2">META GMT</p>
+                <div id="val-gmt" class="text-6xl font-black text-white">...</div>
             </div>
         </div>
     </div>
+
+    <script>
+        Papa.parse("ventas.csv", {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const data = results.data[0]; // Tomamos la primera fila de datos
+                document.getElementById('val-ventas').innerText = data.ventas_brutas || "0";
+                document.getElementById('val-movistar').innerText = (data.meta_movistar || "0") + "%";
+                document.getElementById('val-gmt').innerText = (data.meta_gmt || "0") + "%";
+            }
+        });
+    </script>
 </body>
 </html>
