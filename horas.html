@@ -5,68 +5,179 @@
     <title>GMT CONTROL | AUDITORÍA</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .day-box { width: 19px; height: 19px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
-        .spr-high { background-color: #2563eb; color: white; }
-        .vic-high { background-color: #f97316; color: white; }
-        .day-off { background-color: #ffffff; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; transition: 0.2s; }
+        .spr-high { background-color: #2563eb; color: white; border: 1px solid #1d4ed8; }
+        .vic-high { background-color: #f97316; color: white; border: 1px solid #ea580c; }
+        .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
+        .table-container { max-height: 500px; overflow-y: auto; scrollbar-width: thin; }
     </style>
 </head>
 <body class="bg-slate-50 p-4">
     <div id="dashboard_wrapper" class="max-w-7xl mx-auto">
         
-        <div class="bg-white p-6 rounded-xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:row justify-between items-center gap-4">
             <div>
-                <h1 class="text-xl font-black uppercase text-slate-900">GMT CONTROL | <span class="text-blue-600">AUDITORÍA</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 uppercase italic">Actualizado: <span id="last_update" class="text-blue-600 underline">--/--</span></p>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tighter">GMT <span class="text-blue-600">AUDITORÍA</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Control de Conexión por Gerencia</p>
             </div>
-            <div class="flex flex-wrap justify-center gap-3">
-                <select id="filter_month" onchange="cargarArchivoMes(this.value)" class="bg-blue-50 text-blue-700 text-[10px] font-black px-4 py-2 rounded-lg border border-blue-100 outline-none">
-                    <option value="01">ENERO 2026</option>
-                    <option value="02" selected>FEBRERO 2026</option>
-                </select>
-                <select id="filter_ger" onchange="renderDashboard()" class="bg-slate-100 text-slate-700 text-[10px] font-black px-4 py-2 rounded-lg border border-slate-200 outline-none"></select>
-                <button onclick="generarExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-lg text-[10px] font-black uppercase">📊 EXCEL</button>
+            <div class="flex gap-2">
+                <select id="filter_ger" onchange="renderDashboard()" class="bg-white border-2 border-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl outline-none focus:border-blue-500"></select>
+                <div class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase">Febrero 2026</div>
             </div>
         </div>
 
-        <div id="alerta_panel" class="bg-white border border-red-200 rounded-xl mb-6 overflow-hidden shadow-lg">
-            <div class="bg-red-600 p-3 flex justify-between items-center text-white text-[10px] font-black">
-                <span>⚠️ ALERTAS DE INACTIVIDAD / SIN ESTRUCTURA</span>
-                <input type="text" id="search_user" oninput="renderDashboard()" placeholder="BUSCAR ASESOR..." class="bg-white/20 px-3 py-1 rounded outline-none placeholder-white/70 uppercase text-[9px] w-48">
+        <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm mb-6">
+            <div class="bg-slate-900 p-4 flex justify-between items-center">
+                <h2 class="text-white text-xs font-black tracking-widest uppercase">⚠️ Alertas de Inactividad (Menos conexión primero)</h2>
+                <input type="text" id="search_user" oninput="renderDashboard()" placeholder="BUSCAR ASESOR..." class="bg-white/10 text-white text-[10px] px-4 py-2 rounded-lg outline-none w-64 placeholder-white/30">
             </div>
-            <div class="max-h-64 overflow-y-auto">
-                <table class="w-full text-[10px] text-left border-collapse">
-                    <thead class="bg-slate-100 sticky top-0 uppercase font-bold text-slate-600">
-                        <tr>
-                            <th class="p-3 border-b">Ejecutivo</th>
-                            <th class="p-3 border-b text-center">Días Activos</th>
-                            <th class="p-3 border-b">Horas Totales</th>
-                            <th class="p-3 border-b">Gerencia / Campaña</th>
+            
+            <div class="table-container">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 sticky top-0 border-b border-slate-200">
+                        <tr class="text-[10px] text-slate-400 font-black uppercase">
+                            <th class="p-4">Ejecutivo</th>
+                            <th class="p-4 text-center">Días Conectados</th>
+                            <th class="p-4 text-center">Horas Totales</th>
+                            <th class="p-4">Gerencia</th>
+                            <th class="p-4">Detalle Diario</th>
                         </tr>
                     </thead>
-                    <tbody id="t_body_alerts" class="divide-y divide-slate-100 italic"></tbody>
+                    <tbody id="t_body_main" class="divide-y divide-slate-100">
+                        </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-4 rounded-xl border shadow-sm text-center">
-                <p class="text-[9px] font-bold text-slate-400">ALERTAS TOTALES</p>
-                <p id="k_inact" class="text-2xl font-black text-red-600">0</p>
-            </div>
-            <div class="bg-white p-4 rounded-xl border shadow-sm text-center">
-                <p class="text-[9px] font-bold text-slate-400">TOTAL CONEXIÓN</p>
-                <p id="k_tot" class="text-2xl font-black text-slate-800">00:00</p>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow border overflow-x-auto">
-            <table class="w-full text-[10px]">
-                <tbody id="t_body_calendar" class="divide-y"></tbody>
-            </table>
+        <div id="loader" class="text-center p-10">
+            <p class="text-slate-400 font-bold animate-pulse uppercase text-xs">Cargando base de datos...</p>
         </div>
     </div>
+
+    <script>
+        let rawData = [];
+        let dates = [];
+
+        // Función para convertir tiempo HH:MM:SS a segundos
+        const tToSec = (t) => {
+            if (!t || t === "0" || t.includes('N/D')) return 0;
+            const p = t.split(':');
+            if (p.length < 2) return 0;
+            return (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0));
+        };
+
+        // Función para convertir segundos a HH:MM
+        const secToT = (s) => {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            return `${h}h ${m}m`;
+        };
+
+        async function init() {
+            try {
+                const response = await fetch('data_02.csv?v=' + Date.now());
+                const text = await response.text();
+                const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+                
+                // Detectar separador automáticamente
+                const sep = lines[0].includes(';') ? ';' : ',';
+                const headers = lines[0].split(sep);
+                dates = headers.slice(9).filter(h => h.includes('/'));
+
+                // Agrupar por asesor (sumar sistemas)
+                const tempMap = {};
+                lines.slice(1).forEach(line => {
+                    const c = line.split(sep).map(x => x.replace(/"/g, '').trim());
+                    if (c.length < 10) return;
+
+                    const name = c[1];
+                    const ger = c[3] || "SIN GERENCIA";
+                    const sis = c[0];
+                    const daily = c.slice(9, 9 + dates.length);
+
+                    if (!tempMap[name]) {
+                        tempMap[name] = { name, ger, systems: {} };
+                    }
+                    tempMap[name].systems[sis] = daily;
+                });
+
+                rawData = Object.values(tempMap);
+                
+                // Cargar Gerencias en el filtro
+                const gers = [...new Set(rawData.map(r => r.ger))].sort();
+                document.getElementById('filter_ger').innerHTML = '<option value="">TODAS LAS GERENCIAS</option>' + 
+                    gers.map(g => `<option value="${g}">${g}</option>`).join('');
+
+                document.getElementById('loader').classList.add('hidden');
+                renderDashboard();
+
+            } catch (error) {
+                console.error("Error cargando el archivo:", error);
+                document.getElementById('loader').innerHTML = `<p class="text-red-500 font-bold">Error: No se encontró data_02.csv</p>`;
+            }
+        }
+
+        function renderDashboard() {
+            const filterGer = document.getElementById('filter_ger').value;
+            const search = document.getElementById('search_user').value.toUpperCase();
+            const tbody = document.getElementById('t_body_main');
+
+            // Procesar métricas por usuario
+            let processed = rawData.map(u => {
+                let totalSec = 0;
+                let daysAct = 0;
+                let dailyMatrix = [];
+
+                // Sumar todos sus sistemas por día
+                for (let i = 0; i < dates.length; i++) {
+                    let daySec = 0;
+                    let systemType = 'SPR'; // Default
+                    Object.keys(u.systems).forEach(s => {
+                        const sSec = tToSec(u.systems[s][i]);
+                        daySec += sSec;
+                        if (s.includes('VICI')) systemType = 'VIC';
+                    });
+                    if (daySec > 0) daysAct++;
+                    totalSec += daySec;
+                    dailyMatrix.push({ sec: daySec, type: systemType, label: dates[i].split('/')[0] });
+                }
+                return { ...u, totalSec, daysAct, dailyMatrix };
+            });
+
+            // Aplicar Filtros
+            processed = processed.filter(u => 
+                (!filterGer || u.ger === filterGer) && 
+                (!search || u.name.toUpperCase().includes(search))
+            );
+
+            // ORDENAR: De menor a mayor cantidad de días activos (Alertas)
+            processed.sort((a, b) => a.daysAct - b.daysAct);
+
+            // Generar HTML
+            tbody.innerHTML = processed.map(u => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="p-4 font-bold text-slate-700 text-xs uppercase">${u.name}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-black ${u.daysAct < 5 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
+                            ${u.daysAct} DÍAS
+                        </span>
+                    </td>
+                    <td class="p-4 text-center font-mono font-bold text-slate-500 text-xs">${secToT(u.totalSec)}</td>
+                    <td class="p-4 text-[10px] font-bold text-slate-400 uppercase">${u.ger}</td>
+                    <td class="p-4 flex gap-1 flex-wrap">
+                        ${u.dailyMatrix.map(d => `
+                            <div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" 
+                                 title="${d.label}: ${secToT(d.sec)}">
+                                ${d.label}
+                            </div>
+                        `).join('')}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
