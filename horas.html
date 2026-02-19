@@ -5,158 +5,169 @@
     <title>GMT CONTROL | AUDITORÍA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .day-box { width: 20px; height: 20px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
-        .spr-high { background-color: #2563eb; color: white; }
-        .vic-high { background-color: #f97316; color: white; }
+        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
+        .spr-high { background-color: #2563eb; color: white; } /* Azul para Sprinklr */
+        .vic-high { background-color: #f97316; color: white; } /* Naranja para Vicidial */
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        #debug-log { font-family: monospace; font-size: 10px; color: #64748b; background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 20px; border: 1px solid #e2e8f0; }
+        .table-scroll { max-height: 70vh; overflow-y: auto; }
     </style>
 </head>
 <body class="bg-slate-50 p-4">
     <div class="max-w-7xl mx-auto">
+        
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-black text-slate-900">GMT <span class="text-blue-600">AUDITORÍA</span></h1>
-                <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase">Cargando datos...</p>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tighter">GMT <span class="text-blue-600">AUDITORÍA</span></h1>
+                <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase">Esperando archivo...</p>
             </div>
-            <select id="filter_ger" onchange="renderDashboard()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl outline-none"></select>
+            <div class="flex gap-2">
+                <select id="filter_ger" onchange="render()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl outline-none"></select>
+                <input type="text" id="search" oninput="render()" placeholder="BUSCAR NOMBRE..." class="border-2 border-slate-200 text-xs px-4 py-2 rounded-xl outline-none w-48">
+            </div>
         </div>
 
         <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div class="bg-red-600 p-3 text-white text-[10px] font-black tracking-widest uppercase">
-                ⚠️ Alertas de Inactividad (Menos conexión primero)
+            <div class="bg-red-600 p-3 text-white text-[10px] font-black uppercase tracking-widest">
+                ⚠️ Listado de Conexión (Menor actividad primero)
             </div>
-            <div class="overflow-x-auto">
+            <div class="table-scroll">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 border-b border-slate-200">
+                    <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
                         <tr class="text-[10px] text-slate-400 font-black uppercase">
                             <th class="p-4">Ejecutivo</th>
                             <th class="p-4 text-center">Días Activos</th>
+                            <th class="p-4 text-center">Horas Totales</th>
                             <th class="p-4">Gerencia</th>
-                            <th class="p-4">Calendario</th>
+                            <th class="p-4">Detalle Diario</th>
                         </tr>
                     </thead>
-                    <tbody id="t_body_main" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="t_body" class="divide-y divide-slate-100 text-[11px]">
+                        </tbody>
                 </table>
             </div>
         </div>
 
-        <div id="debug-log">Iniciando sistema...</div>
+        <div id="debug-log" class="mt-4 p-4 bg-slate-100 text-slate-500 font-mono text-[10px] rounded-lg hidden"></div>
     </div>
 
     <script>
         let rawData = [];
         let dates = [];
 
-        function log(msg) {
-            console.log(msg);
-            document.getElementById('debug-log').innerText += "\n> " + msg;
+        function showLog(msg) {
+            const d = document.getElementById('debug-log');
+            d.classList.remove('hidden');
+            d.innerHTML += `> ${msg}<br>`;
         }
 
+        // Convertir HH:MM:SS a segundos
         const tToSec = (t) => {
-            if (!t || t === "0" || t === "00:00:00" || t.includes('N/D')) return 0;
+            if (!t || t === "0" || t.includes('N/D')) return 0;
             const p = t.split(':');
-            if (p.length < 2) return 0;
-            return (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0));
+            return p.length >= 2 ? (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0)) : 0;
         };
 
-        async function init() {
-            try {
-                log("Buscando archivo data_02.csv...");
-                const response = await fetch('data_02.csv');
-                
-                if (!response.ok) {
-                    throw new Error("No se pudo encontrar el archivo data_02.csv en la carpeta.");
-                }
+        // Convertir segundos a HH:MM
+        const secToT = (s) => {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            return `${h}h ${m}m`;
+        };
 
+        async function cargarDatos() {
+            try {
+                const response = await fetch('data_02.csv?v=' + Date.now());
+                if (!response.ok) throw new Error("No se encuentra data_02.csv");
+                
                 const text = await response.text();
                 const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-                log("Archivo leído. Total líneas: " + lines.length);
-
+                
+                // Detectar si el CSV usa , o ;
                 const sep = lines[0].includes(';') ? ';' : ',';
                 const headers = lines[0].split(sep);
                 
-                // Detectamos las fechas desde la columna 9
-                dates = headers.slice(9).filter(h => h.includes('/') && h.trim() !== "");
-                log("Fechas detectadas: " + dates.length);
-
+                // Extraer fechas (desde columna 9 en adelante)
+                dates = headers.slice(9).filter(h => h.includes('/')).map(h => h.trim());
+                
                 const tempMap = {};
-                lines.slice(1).forEach((line, index) => {
+                lines.slice(1).forEach(line => {
                     const c = line.split(sep).map(x => x.replace(/"/g, '').trim());
-                    if (c.length < 5) return;
+                    if (c.length < 10) return;
 
-                    const sistema = c[0];
-                    const nombre = c[1];
-                    const gerencia = c[3] || "N/D";
-                    const horasDiarias = c.slice(9, 9 + dates.length);
+                    const name = c[1];
+                    const sis = c[0].toUpperCase();
+                    const ger = c[3] || "N/D";
+                    const daily = c.slice(9, 9 + dates.length);
 
-                    if (!tempMap[nombre]) {
-                        tempMap[nombre] = { nombre, gerencia, sistemas: {} };
+                    if (!tempMap[name]) {
+                        tempMap[name] = { name, ger, systems: {} };
                     }
-                    tempMap[nombre].sistemas[sistema] = horasDiarias;
+                    tempMap[name].systems[sis] = daily;
                 });
 
                 rawData = Object.values(tempMap);
-                log("Usuarios procesados: " + rawData.length);
-
-                const gers = [...new Set(rawData.map(r => r.gerencia))].sort();
+                
+                // Llenar filtro de Gerencias
+                const gers = [...new Set(rawData.map(r => r.ger))].sort();
                 document.getElementById('filter_ger').innerHTML = '<option value="">TODAS LAS GERENCIAS</option>' + 
                     gers.map(g => `<option value="${g}">${g}</option>`).join('');
 
-                document.getElementById('status-text').innerText = "DATOS CARGADOS: " + rawData.length + " ASESORES";
-                renderDashboard();
+                document.getElementById('status-text').innerText = "BASE CARGADA: " + rawData.length + " REGISTROS";
+                render();
 
-            } catch (error) {
-                log("ERROR: " + error.message);
-                document.getElementById('status-text').innerText = "ERROR AL CARGAR";
-                document.getElementById('status-text').classList.add('text-red-600');
+            } catch (err) {
+                showLog("ERROR CRÍTICO: " + err.message);
+                document.getElementById('status-text').innerText = "ERROR AL CARGAR CSV";
             }
         }
 
-        function renderDashboard() {
+        function render() {
             const filterGer = document.getElementById('filter_ger').value;
-            const tbody = document.getElementById('t_body_main');
+            const searchName = document.getElementById('search').value.toUpperCase();
+            const tbody = document.getElementById('t_body');
 
             let processed = rawData.map(u => {
-                let diasActivos = 0;
-                let matriz = [];
+                let totalSec = 0;
+                let daysAct = 0;
+                let dailyMatrix = [];
 
                 for (let i = 0; i < dates.length; i++) {
-                    let segundosHoy = 0;
-                    let tipo = 'SPR';
-                    
-                    Object.keys(u.sistemas).forEach(s => {
-                        const sSec = tToSec(u.sistemas[s][i]);
-                        segundosHoy += sSec;
-                        if (s.toUpperCase().includes('VICI')) tipo = 'VIC';
+                    let daySec = 0;
+                    let type = 'SPR';
+                    Object.keys(u.systems).forEach(s => {
+                        const sSec = tToSec(u.systems[s][i]);
+                        daySec += sSec;
+                        if (s.includes('VICI')) type = 'VIC';
                     });
-
-                    if (segundosHoy > 0) diasActivos++;
-                    matriz.push({ activo: segundosHoy > 0, tipo, label: dates[i].split('/')[0] });
+                    if (daySec > 0) daysAct++;
+                    totalSec += daySec;
+                    dailyMatrix.push({ sec: daySec, type, label: dates[i].split('/')[0] });
                 }
-                return { ...u, diasActivos, matriz };
+                return { ...u, totalSec, daysAct, dailyMatrix };
             });
 
-            // FILTRO
-            if (filterGer) {
-                processed = processed.filter(u => u.gerencia === filterGer);
-            }
+            // Filtros
+            processed = processed.filter(u => 
+                (!filterGer || u.ger === filterGer) && 
+                (!searchName || u.name.toUpperCase().includes(searchName))
+            );
 
-            // ORDENAR: Menos días activos arriba
-            processed.sort((a, b) => a.diasActivos - b.diasActivos);
+            // ORDENAR: El que menos días tiene va ARRIBA (Alerta)
+            processed.sort((a, b) => a.daysAct - b.daysAct);
 
             tbody.innerHTML = processed.map(u => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-bold text-slate-700 text-[11px] uppercase">${u.nombre}</td>
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 font-bold text-slate-800 uppercase">${u.name}</td>
                     <td class="p-4 text-center">
-                        <span class="px-2 py-1 rounded-md text-[9px] font-black ${u.diasActivos < 5 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
-                            ${u.diasActivos} DÍAS
+                        <span class="px-3 py-1 rounded-full font-black ${u.daysAct < 5 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
+                            ${u.daysAct} DÍAS
                         </span>
                     </td>
-                    <td class="p-4 text-[9px] font-bold text-slate-400 uppercase">${u.gerencia}</td>
+                    <td class="p-4 text-center font-mono font-bold text-slate-500">${secToT(u.totalSec)}</td>
+                    <td class="p-4 text-slate-400 font-bold uppercase text-[9px]">${u.ger}</td>
                     <td class="p-4 flex gap-1 flex-wrap">
-                        ${u.matriz.map(d => `
-                            <div class="day-box ${d.activo ? (d.tipo === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}">
+                        ${u.dailyMatrix.map(d => `
+                            <div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" title="Día ${d.label}: ${secToT(d.sec)}">
                                 ${d.label}
                             </div>
                         `).join('')}
@@ -165,7 +176,7 @@
             `).join('');
         }
 
-        window.onload = init;
+        window.onload = cargarDatos;
     </script>
 </body>
 </html>
