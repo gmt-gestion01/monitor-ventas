@@ -5,117 +5,85 @@
     <title>GMT | MONITOR VENTAS</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; }
-        .bg-main-dark { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); }
-        .bg-movistar { background: linear-gradient(135deg, #065f46 0%, #10b981 100%); }
-        .bg-gmt { background: linear-gradient(135deg, #9a3412 0%, #f97316 100%); }
-        .glass-card { background: #ffffff; border: 1px solid #e2e8f0; }
-        .stat-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; color: #94a3b8; }
-        .sup-card { border: 1px solid #e2e8f0; border-radius: 2.5rem; background: white; overflow: hidden; }
-    </style>
 </head>
-<body class="p-4 md:p-8">
-
+<body class="bg-slate-50 p-4 md:p-8">
     <div id="dashboard-content" class="max-w-7xl mx-auto">
-        <header class="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
-            <div>
-                <h1 class="text-4xl font-black tracking-tighter uppercase italic">GMT PREPAGO</h1>
-                <p class="text-slate-400 font-bold text-[11px] tracking-widest uppercase">Monitor de Ventas</p>
-            </div>
-            <div class="flex gap-3">
-                <select id="month_filter" onchange="updateDayFilter()" class="bg-white border-2 p-2 rounded-xl text-xs font-black outline-none"></select>
-                <select id="day_filter" onchange="render()" class="bg-white border-2 p-2 rounded-xl text-xs font-black outline-none"></select>
-            </div>
-        </header>
-
-        <div id="kpi_main_area" class="glass-card rounded-[3rem] overflow-hidden mb-8 shadow-xl"></div>
-        
-        <div class="glass-card p-8 rounded-[2.5rem] mb-8 text-center">
-            <h4 class="stat-label mb-6">Tendencia vs Metas</h4>
-            <div id="g_tendencia" style="height: 400px; width: 100%;"></div>
+        <div class="flex justify-between items-center mb-10">
+            <h1 class="text-4xl font-black italic text-slate-800">GMT VENTAS</h1>
+            <select id="month_filter" onchange="updateDayFilter()" class="border-2 p-2 rounded-xl text-xs font-black"></select>
         </div>
 
-        <div class="mb-20">
-            <h4 class="stat-label mb-6 px-4 border-l-4 border-blue-800 ml-2">Monitor por Supervisor</h4>
-            <div id="supervisor_grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-white">
+            <div class="bg-blue-800 p-8 rounded-3xl text-center">
+                <p class="text-xs font-bold opacity-70">VENTAS BRUTAS</p>
+                <h2 id="total_ventas" class="text-6xl font-black">0</h2>
+            </div>
         </div>
+
+        <div class="bg-white p-6 rounded-3xl shadow-xl mb-8">
+            <div id="g_tendencia" style="height: 400px;"></div>
+        </div>
+
+        <div id="supervisor_grid" class="grid grid-cols-1 md:grid-cols-4 gap-4"></div>
     </div>
 
     <script>
         let globalRawData = [];
 
-        // Función que carga los datos automáticamente al abrir
-        async function autoLoadCSV() {
-            try {
-                // He cambiado 'data.csv' por 'ventas.csv' que es tu archivo real
-                const response = await fetch('ventas.csv?v=' + Date.now());
-                if (response.ok) {
-                    const text = await response.text();
-                    processData(text);
-                } else {
-                    console.error("No se encontró el archivo ventas.csv");
-                }
-            } catch (e) { console.error("Error cargando CSV:", e); }
-        }
+        function autoLoadCSV() {
+            fetch(`ventas.csv?v=${Date.now()}`)
+                .then(res => res.text())
+                .then(text => {
+                    const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+                    const sep = lines[0].includes(';') ? ';' : ',';
+                    
+                    globalRawData = lines.slice(1).map(line => {
+                        const c = line.split(sep).map(x => x.trim());
+                        if(!c[1]) return null;
+                        return { 
+                            fVenta: c[1], 
+                            supervisor: c[2] || "S/S", 
+                            mes: c[9] ? c[9].toLowerCase() : "febrero" 
+                        };
+                    }).filter(d => d !== null);
 
-        function processData(text) {
-            const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-            const sep = lines[0].includes(';') ? ';' : ',';
-            const headers = lines[0].split(sep).map(h => h.trim().toUpperCase());
-            const mesIdx = headers.indexOf("MES");
-            
-            globalRawData = lines.slice(1).map(line => {
-                const c = line.split(sep).map(x => x.replace(/['"]+/g, '').trim());
-                if (!c[1]) return null;
-                return {
-                    fVenta: c[1],
-                    supervisor: c[2] || "S/S",
-                    esAltaReal: c[3] && c[3].toUpperCase() !== "SIN ALTA",
-                    esActivacion: c[4] && c[4].toUpperCase().includes("ACTIVACION"),
-                    esTrafico: c[6] && c[6].toUpperCase().includes("TRAFICO"),
-                    esEnrolado: c[8] && c[8].toUpperCase().includes("ENROLADO"),
-                    recargaVal: parseFloat(c[7]) || 0,
-                    mes: mesIdx !== -1 ? c[mesIdx].toLowerCase() : "febrero"
-                };
-            }).filter(d => d !== null);
-
-            const meses = [...new Set(globalRawData.map(d => d.mes))].sort();
-            const selector = document.getElementById('month_filter');
-            selector.innerHTML = meses.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-            if(meses.length > 0) selector.value = meses[meses.length - 1];
-            
-            updateDayFilter();
+                    const meses = [...new Set(globalRawData.map(d => d.mes))];
+                    document.getElementById('month_filter').innerHTML = meses.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+                    updateDayFilter();
+                });
         }
 
         function updateDayFilter() {
-            const selMes = document.getElementById('month_filter').value;
-            const days = [...new Set(globalRawData.filter(d => d.mes === selMes).map(d => d.fVenta))].sort();
-            const selector = document.getElementById('day_filter');
-            selector.innerHTML = `<option value="ALL">TODOS LOS DÍAS</option>` + 
-                                days.map(d => `<option value="${d}">${d}</option>`).join('');
             render();
         }
 
         function render() {
             const selMes = document.getElementById('month_filter').value;
-            const selDia = document.getElementById('day_filter').value;
-            let data = globalRawData.filter(d => d.mes === selMes);
-            if (selDia !== "ALL") data = data.filter(d => d.fVenta === selDia);
-
-            const total = data.length;
-            // Aquí va toda tu lógica de KPIs y Gráficas de tu archivo original...
-            // (Para no alargar, asumo que mantienes tu lógica de renderizado original)
-            document.getElementById('kpi_main_area').innerHTML = `<div class="p-10 bg-main-dark text-white text-center">
-                <p class="stat-label text-blue-200">Ventas Brutas</p>
-                <h2 class="text-7xl font-black">${total}</h2>
-            </div>`;
+            const data = globalRawData.filter(d => d.mes === selMes);
             
-            // ... (Resto de tu código de gráficas) ...
+            document.getElementById('total_ventas').innerText = data.length;
+
+            // Gráfica simple
+            const dates = [...new Set(data.map(d => d.fVenta))].sort();
+            const counts = dates.map(dt => data.filter(d => d.fVenta === dt).length);
+
+            Plotly.newPlot('g_tendencia', [{
+                x: dates, y: counts, type: 'scatter', mode: 'lines+markers',
+                line: {color: '#1e3a8a', width: 3}
+            }], { title: 'VENTAS POR DÍA' });
+
+            // Supervisores
+            const supers = [...new Set(data.map(d => d.supervisor))].sort();
+            document.getElementById('supervisor_grid').innerHTML = supers.map(s => {
+                const cant = data.filter(x => x.supervisor === s).length;
+                return `<div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">${s}</p>
+                    <p class="text-2xl font-black text-slate-800">${cant}</p>
+                </div>`;
+            }).join('');
         }
 
-        // ¡IMPORTANTE! Ejecutar la carga al iniciar
-        autoLoadCSV();
+        window.onload = autoLoadCSV;
     </script>
 </body>
 </html>
