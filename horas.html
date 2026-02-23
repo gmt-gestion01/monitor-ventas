@@ -2,13 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT CONTROL | Auditoría con Etiquetas</title>
+    <title>GMT CONTROL | Sprinklr Audit</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); }
         .spr-high { background-color: #2563eb; color: white; }
-        .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; }
         .sticky-thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; border-bottom: 2px solid #e2e8f0; }
     </style>
@@ -16,33 +15,41 @@
 <body class="bg-slate-100 p-4 md:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-xl font-black uppercase tracking-tighter">GMT <span class="text-blue-600">AUDIT</span></h1>
-                <p id="file_status" class="text-[10px] font-bold text-red-500 uppercase">⚠️ SELECCIONA EL ARCHIVO CSV</p>
+                <h1 class="text-xl font-black uppercase tracking-tighter text-slate-900">GMT <span class="text-blue-600">SPRINKLR</span></h1>
+                <p id="file_status" class="text-[10px] font-bold text-red-500 uppercase">Cargar archivo HORAS_ACUMULADO_HC_1.csv</p>
             </div>
             
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap justify-center gap-2">
                 <input type="file" id="csv_input" accept=".csv" class="hidden">
-                <button onclick="document.getElementById('csv_input').click()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:bg-blue-700">Cargar Datos</button>
-                <select id="sel_mes" class="bg-slate-50 text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none"></select>
-                <select id="sel_area" class="bg-slate-50 text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none"></select>
+                <button onclick="document.getElementById('csv_input').click()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:bg-blue-700 transition-all">📂 Cargar CSV</button>
+                
+                <select id="sel_mes" class="bg-white text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none cursor-pointer"></select>
+                <select id="sel_ger" class="bg-white text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none cursor-pointer"></select>
+                <select id="sel_area" class="bg-white text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none cursor-pointer"></select>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border mb-6">
-            <div id="chart_div" style="height: 350px;"></div>
+        <div class="bg-white p-6 rounded-2xl border mb-6 shadow-sm">
+            <div id="chart_div" style="height: 400px;"></div>
         </div>
 
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
-            <div class="p-4 bg-slate-50 border-b flex items-center justify-between">
-                <input type="text" id="search_box" placeholder="BUSCAR AGENTE..." class="w-full max-w-sm px-4 py-2 text-xs border rounded-lg outline-none font-bold uppercase">
-                <p id="k_resumen" class="text-[10px] font-black text-slate-500 uppercase"></p>
+            <div class="p-4 bg-slate-50 border-b flex flex-col md:flex-row justify-between items-center gap-4">
+                <input type="text" id="search_box" placeholder="BUSCAR AGENTE..." class="w-full max-w-sm px-4 py-2 text-xs border rounded-lg outline-none font-bold uppercase focus:ring-2 focus:ring-blue-500/20">
+                <div class="flex items-center gap-4">
+                    <p id="total_acumulado" class="text-xs font-black text-blue-600 uppercase"></p>
+                </div>
             </div>
-            <div class="overflow-x-auto max-h-[500px]">
+            <div class="overflow-x-auto max-h-[600px]">
                 <table class="w-full text-left text-[11px]">
                     <thead class="sticky-thead bg-slate-50 text-slate-500 font-bold uppercase">
-                        <tr><th class="p-4">Agente</th><th class="p-4">Conexión Diaria</th><th class="p-4 text-right">Total</th></tr>
+                        <tr>
+                            <th class="p-4">Agente / Gerencia</th>
+                            <th class="p-4 text-center">Actividad Diaria (Sprinklr)</th>
+                            <th class="p-4 text-right">Total Horas</th>
+                        </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100"></tbody>
                 </table>
@@ -51,7 +58,7 @@
     </div>
 
     <script>
-        let dataGlobal = {}, fechasGlobal = [], mesesDisp = {};
+        let dataGlobal = {}, fechasGlobal = [], mesesDisp = {}, gersDisp = {}, areasDisp = {};
 
         document.getElementById('csv_input').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -80,109 +87,117 @@
             
             const iAg = cab.indexOf("AGENTE"), iHr = cab.indexOf("HORAS LOGUEO"),
                   iDi = cab.indexOf("DIA"), iMe = cab.indexOf("MES"),
-                  iSi = cab.indexOf("SISTEMA"), iAr = cab.indexOf("AREA");
+                  iSi = cab.indexOf("SISTEMA"), iAr = cab.indexOf("AREA"),
+                  iGe = cab.indexOf("GERENCIA");
 
             dataGlobal = {};
-            let setF = new Set(), setA = new Set();
+            let setF = new Set(), setA = new Set(), setG = new Set();
             mesesDisp = {};
 
             for (let i = 1; i < lineas.length; i++) {
                 const col = lineas[i].split(sep).map(c => c.trim());
                 if (col.length < 5) continue;
 
+                const sis = col[iSi]?.toUpperCase() || "";
+                if (!sis.includes("SPRINKLR")) continue; // FILTRO SOLO SPRINKLR
+
                 const ag = col[iAg], fec = col[iDi], mesN = col[iMe]?.toUpperCase(),
-                      sis = col[iSi]?.toUpperCase() || "", seg = t2s(col[iHr]),
-                      area = col[iAr] || "S/A", mesId = fec.split('/')[1];
+                      seg = t2s(col[iHr]), area = col[iAr] || "S/A", 
+                      ger = col[iGe] || "SIN GERENCIA", mesId = fec.split('/')[1];
 
                 if (!ag || !fec) continue;
-                setF.add(fec); setA.add(area);
+                setF.add(fec); setA.add(area); setG.add(ger);
                 if (mesId) mesesDisp[mesId] = mesN;
 
-                if (!dataGlobal[ag]) dataGlobal[ag] = { ag, area, logs: {} };
-                if (!dataGlobal[ag].logs[fec]) dataGlobal[ag].logs[fec] = { SPR: 0, VIC: 0 };
-
-                if (sis.includes("SPRINKLR")) dataGlobal[ag].logs[fec].SPR += seg;
-                else dataGlobal[ag].logs[fec].VIC += seg;
+                if (!dataGlobal[ag]) dataGlobal[ag] = { ag, area, ger, logs: {} };
+                if (!dataGlobal[ag].logs[fec]) dataGlobal[ag].logs[fec] = 0;
+                dataGlobal[ag].logs[fec] += seg;
             }
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
             
-            const sMes = document.getElementById('sel_mes');
-            sMes.innerHTML = '<option value="ALL">TODOS LOS MESES</option>';
-            Object.keys(mesesDisp).sort().forEach(id => sMes.innerHTML += `<option value="${id}">${mesesDisp[id]}</option>`);
+            // Llenar Selectores
+            const fillSel = (id, data, label) => {
+                const s = document.getElementById(id);
+                s.innerHTML = `<option value="ALL">${label}</option>`;
+                [...data].sort().forEach(v => {
+                    const val = typeof v === 'object' ? v.id : v;
+                    const txt = typeof v === 'object' ? v.txt : v;
+                    s.innerHTML += `<option value="${val}">${txt}</option>`;
+                });
+            };
 
-            const sArea = document.getElementById('sel_area');
-            sArea.innerHTML = '<option value="ALL">TODAS LAS AREAS</option>';
-            [...setA].sort().forEach(a => sArea.innerHTML += `<option value="${a}">${a}</option>`);
+            fillSel('sel_mes', Object.keys(mesesDisp).map(k => ({id: k, txt: mesesDisp[k]})), 'TODOS LOS MESES');
+            fillSel('sel_ger', setG, 'TODAS LAS GERENCIAS');
+            fillSel('sel_area', setA, 'TODAS LAS AREAS');
 
-            document.getElementById('file_status').innerText = "✅ DATOS ACTUALIZADOS";
+            document.getElementById('file_status').innerText = "✅ ARCHIVO CARGADO";
             document.getElementById('file_status').className = "text-[10px] font-bold text-emerald-500 uppercase";
             render();
         }
 
         function render() {
             const mSel = document.getElementById('sel_mes').value,
+                  gSel = document.getElementById('sel_ger').value,
                   aSel = document.getElementById('sel_area').value,
                   q = document.getElementById('search_box').value.toUpperCase();
 
             const fFilt = mSel === "ALL" ? fechasGlobal : fechasGlobal.filter(f => f.split('/')[1] === mSel);
-            let html = "", tS = 0, tV = 0;
-            let timeS = fFilt.map(() => 0), timeV = fFilt.map(() => 0);
+            let html = "", tTotal = 0;
+            let timeLine = fFilt.map(() => 0);
 
             Object.values(dataGlobal).forEach(u => {
-                if ((aSel !== "ALL" && u.area !== aSel) || (q && !u.ag.toUpperCase().includes(q))) return;
+                if ((gSel !== "ALL" && u.ger !== gSel) || 
+                    (aSel !== "ALL" && u.area !== aSel) || 
+                    (q && !u.ag.toUpperCase().includes(q))) return;
 
                 let uSum = 0, boxes = "";
                 fFilt.forEach((f, idx) => {
-                    const r = u.logs[f] || { SPR: 0, VIC: 0 };
-                    uSum += (r.SPR + r.VIC);
-                    tS += r.SPR; tV += r.VIC;
-                    timeS[idx] += r.SPR; timeV[idx] += r.VIC;
+                    const segs = u.logs[f] || 0;
+                    uSum += segs;
+                    timeLine[idx] += segs;
 
-                    const css = r.SPR > r.VIC ? 'spr-high' : (r.VIC > 0 ? 'vic-high' : 'day-off');
-                    boxes += `<div class="day-box ${css}" title="${f}">${f.split('/')[0]}</div>`;
+                    const css = segs > 0 ? 'spr-high' : 'day-off';
+                    boxes += `<div class="day-box ${css}" title="${f}: ${s2t(segs)}">${f.split('/')[0]}</div>`;
                 });
 
+                tTotal += uSum;
                 html += `<tr>
-                    <td class="p-4 font-black">${u.ag}<br><span class="text-[9px] text-slate-400 uppercase">${u.area}</span></td>
+                    <td class="p-4 font-black text-slate-800">${u.ag}<br><span class="text-[9px] text-slate-400 font-bold uppercase">${u.ger} | ${u.area}</span></td>
                     <td class="p-4 flex flex-wrap gap-1 justify-center">${boxes}</td>
-                    <td class="p-4 text-right font-black text-slate-700">${s2t(uSum)}</td>
+                    <td class="p-4 text-right font-black text-blue-600 text-sm">${s2t(uSum)}</td>
                 </tr>`;
             });
 
             document.getElementById('table_body').innerHTML = html;
+            document.getElementById('total_acumulado').innerText = `Total Sprinklr: ${s2t(tTotal)}`;
             
-            // RENDER GRÁFICO CON ETIQUETAS (text)
-            Plotly.newPlot('chart_div', [
-                { 
-                    x: fFilt.map(f=>f.substring(0,5)), 
-                    y: timeS.map(v=>(v/3600).toFixed(1)), 
-                    name: 'Sprinklr', 
-                    type: 'scatter', 
-                    mode: 'lines+markers+text', // ACTIVAR ETIQUETAS
-                    text: timeS.map(v => v > 0 ? (v/3600).toFixed(1) : ""), // VALORES
-                    textposition: 'top center',
-                    line: {color: '#2563eb', width: 3} 
-                },
-                { 
-                    x: fFilt.map(f=>f.substring(0,5)), 
-                    y: timeV.map(v=>(v/3600).toFixed(1)), 
-                    name: 'Vicidial', 
-                    type: 'scatter', 
-                    mode: 'lines+markers+text', 
-                    text: timeV.map(v => v > 0 ? (v/3600).toFixed(1) : ""),
-                    textposition: 'bottom center',
-                    line: {color: '#f97316', width: 3} 
-                }
-            ], { 
-                title: 'HORAS TOTALES POR DÍA',
-                margin: {t:50, b:40, l:40, r:10},
-                legend: {orientation: 'h', y: 1.1}
-            }, {responsive: true});
+            // GRÁFICO CON ETIQUETAS FORZADAS
+            const valuesY = timeLine.map(v => (v/3600).toFixed(1));
+            
+            Plotly.newPlot('chart_div', [{ 
+                x: fFilt.map(f => f.substring(0,5)), 
+                y: valuesY, 
+                name: 'Horas Sprinklr', 
+                type: 'scatter', 
+                mode: 'lines+markers+text', // ACTIVADO
+                text: valuesY.map(v => v > 0 ? v : ""), // ETIQUETAS
+                textposition: 'top center',
+                textfont: { family: 'Arial Black', size: 10, color: '#1e40af' },
+                line: { color: '#2563eb', width: 4, shape: 'spline' },
+                marker: { size: 8, color: '#1e40af' }
+            }], { 
+                title: { text: 'CONEXIÓN DIARIA SPRINKLR (HORAS)', font: { family: 'Arial Black', size: 14 } },
+                margin: { t: 60, b: 40, l: 50, r: 20 },
+                xaxis: { showgrid: false },
+                yaxis: { title: 'Horas', gridcolor: '#f1f5f9' }
+            }, { responsive: true, displayModeBar: false });
         }
 
-        document.getElementById('sel_mes').onchange = render;
-        document.getElementById('sel_area').onchange = render;
+        // Eventos
+        ['sel_mes', 'sel_ger', 'sel_area'].forEach(id => {
+            document.getElementById(id).onchange = render;
+        });
         document.getElementById('search_box').oninput = render;
     </script>
 </body>
