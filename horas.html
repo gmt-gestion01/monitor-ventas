@@ -2,97 +2,87 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT AUDIT | Dashboard Blue Edition</title>
+    <title>GMT AUDIT | Blue Dashboard v3</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; margin: 1px; }
-        .spr-high { background-color: #3b82f6; color: white; } /* Azul suave */
+        .spr-high { background-color: #3b82f6; color: white; }
         .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
+        .card-stat { border-left: 5px solid #3b82f6; transition: all 0.3s; background: white; border-radius: 1rem; }
         .sticky-thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 20; border-bottom: 2px solid #e2e8f0; }
-        .card-stat { border-left: 4px solid #3b82f6; transition: all 0.3s; background: white; }
-        .card-alert { border-left-color: #ef4444; background-color: #fffafb; }
-        /* Fondo degradado suave para el cuerpo */
-        body { background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%); min-height: 100vh; }
+        body { background: #f8fafc; }
     </style>
 </head>
-<body class="p-4 font-sans text-slate-900">
+<body class="p-4">
 
     <div class="max-w-[1600px] mx-auto">
-        <div class="bg-white/80 backdrop-blur-md p-6 rounded-3xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-4">
-                <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl shadow-lg shadow-blue-200">GMT</div>
+                <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl">GMT</div>
                 <div>
-                    <h1 class="text-xl font-black uppercase tracking-tighter text-slate-800">Auditoría <span class="text-blue-600">Blue Performance</span></h1>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="status_file">Cargando datos desde el repositorio...</p>
+                    <h1 class="text-xl font-black uppercase text-slate-800 tracking-tighter">Auditoría <span class="text-blue-600">Performance</span></h1>
+                    <p class="text-[10px] font-bold text-slate-400" id="status_file">Sincronizando...</p>
                 </div>
             </div>
             
-            <div class="flex flex-wrap items-center gap-3">
-                <div class="flex gap-4 mr-6 px-6 border-r border-l border-slate-100">
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex gap-4 px-6 border-x border-slate-100">
                     <div class="text-right">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Total Logueo</p>
-                        <p class="text-xl font-black text-blue-600 leading-none" id="header_total_hrs">00:00</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Alertas</p>
-                        <p class="text-xl font-black text-red-500 leading-none" id="header_alertas">0</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Total Activo</p>
+                        <p class="text-xl font-black text-blue-600" id="header_total_hrs">0:00</p>
                     </div>
                 </div>
-
-                <div class="bg-white p-2 rounded-2xl border flex gap-2 items-center shadow-sm">
-                    <input type="number" id="dia_inicio" value="1" min="1" max="31" class="w-10 text-[11px] font-bold text-center outline-none">
-                    <span class="text-[9px] font-black text-slate-300 uppercase">A</span>
-                    <input type="number" id="dia_fin" value="31" min="1" max="31" class="w-10 text-[11px] font-bold text-center outline-none">
+                <div class="bg-slate-50 p-2 rounded-xl border flex gap-2 items-center">
+                    <input type="number" id="dia_inicio" value="1" class="w-10 text-center font-bold bg-transparent">
+                    <span class="text-slate-300">/</span>
+                    <input type="number" id="dia_fin" value="31" class="w-10 text-center font-bold bg-transparent">
                 </div>
-                <select id="sel_mes" class="bg-blue-50 text-blue-700 text-[11px] font-bold px-5 py-3 rounded-2xl border border-blue-100 outline-none cursor-pointer"></select>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-5 py-3 rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">🔄 Sincronizar</button>
+                <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm"></select>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase shadow-lg shadow-blue-100">Actualizar</button>
             </div>
         </div>
 
-        <div id="cards_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"></div>
+        <div id="cards_container" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6"></div>
 
-        <div class="flex flex-col gap-6 mb-6">
-            <div class="bg-white p-6 rounded-3xl border shadow-sm w-full">
-                <div id="chart_main" style="height: 300px;"></div>
+        <div class="grid grid-cols-1 gap-6 mb-6">
+            <div class="bg-white p-6 rounded-3xl border shadow-sm">
+                <div id="chart_main"></div>
             </div>
-            <div class="bg-white p-6 rounded-3xl border shadow-sm w-full">
-                <div id="chart_gerencias" style="height: 450px;"></div>
+            <div class="bg-white p-6 rounded-3xl border shadow-sm">
+                <div id="chart_gerencias"></div>
             </div>
         </div>
 
         <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
-            <div class="p-6 bg-slate-50/50 border-b flex flex-col md:flex-row justify-between items-end gap-4">
-                <div class="flex flex-col gap-2 w-full max-w-md">
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Filtro de Gerencia (Incluye S/G)</label>
-                    <select id="sel_ger" class="bg-white text-slate-700 text-[12px] font-black px-4 py-3 rounded-xl border border-slate-200 outline-none cursor-pointer shadow-sm uppercase"></select>
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
+                <div class="flex flex-col gap-1 w-1/3">
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Seleccionar Gerencia:</label>
+                    <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase"></select>
                 </div>
-                
-                <div class="flex gap-8 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex gap-6">
                     <div class="text-center">
-                        <p class="text-[9px] font-black text-slate-400 uppercase">Ejecutivos</p>
-                        <p class="text-xl font-black text-blue-600" id="kpi_count_ejec">0</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Ejecutivos</p>
+                        <p class="text-2xl font-black text-blue-600" id="kpi_count_ejec">0</p>
                     </div>
-                    <div class="text-center border-l border-slate-100 pl-8">
-                        <p class="text-[9px] font-black text-slate-400 uppercase">Horas Grupo</p>
-                        <p class="text-xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
+                    <div class="text-center border-l pl-6">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Horas Grupo</p>
+                        <p class="text-2xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                     </div>
-                    <button onclick="descargarAlertas()" class="bg-blue-50 text-blue-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-100 transition-all self-center ml-4">📥 Excel</button>
                 </div>
             </div>
-            
-            <div class="overflow-x-auto max-h-[700px]">
+            <div class="overflow-x-auto max-h-[600px]">
                 <table class="w-full text-left text-[11px]">
-                    <thead class="sticky-thead bg-[#f8fafc] text-slate-400 font-black uppercase">
+                    <thead class="sticky-thead bg-slate-50 text-slate-400 font-bold uppercase">
                         <tr>
-                            <th class="p-5 w-1/4">Ejecutivo / Gerencia</th>
-                            <th class="p-5 text-center">Calendario de Asistencia</th>
-                            <th class="p-5 text-center bg-blue-50 text-blue-600 border-x border-white">Días On</th>
+                            <th class="p-5">Ejecutivo / Gerencia</th>
+                            <th class="p-5 text-center">Calendario</th>
+                            <th class="p-5 text-center bg-blue-50 text-blue-600">Días On</th>
                             <th class="p-5 text-right">Horas Totales</th>
                         </tr>
                     </thead>
-                    <tbody id="table_body" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
                 </table>
             </div>
         </div>
@@ -100,7 +90,7 @@
 
     <script>
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
-        let dataGlobal = {}, fechasGlobal = [], mesesDisp = {}, alertasActuales = [];
+        let dataGlobal = {}, fechasGlobal = [], mesesDisp = {};
 
         window.onload = cargarDesdeGitHub;
 
@@ -109,9 +99,7 @@
                 const response = await fetch(GITHUB_URL);
                 const csvText = await response.text();
                 procesarCSV(csvText);
-            } catch (err) {
-                document.getElementById('status_file').innerText = "❌ ERROR AL CARGAR";
-            }
+            } catch (err) { console.error("Error cargando CSV"); }
         }
 
         function t2s(t) {
@@ -132,36 +120,36 @@
             
             const iAg = cab.indexOf("AGENTE"), iHr = cab.indexOf("HORAS LOGUEO"),
                   iDi = cab.indexOf("DIA"), iMe = cab.indexOf("MES"),
-                  iGe = cab.indexOf("GERENCIA"), iEs = cab.indexOf("ESTATUS"),
-                  iSi = cab.indexOf("SISTEMA");
+                  iGe = cab.indexOf("GERENCIA"), iEs = cab.indexOf("ESTATUS");
 
-            dataGlobal = {}; fechasGlobal = []; mesesDisp = {};
-            let setF = new Set(), setG = new Set();
+            dataGlobal = {}; fechasGlobal = []; let setF = new Set(), setG = new Set();
 
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
-                if (col[iEs]?.toUpperCase() !== "ACTIVO" || !col[iSi]?.toUpperCase().includes("SPRINKLR")) return;
+                if (col[iEs]?.toUpperCase() !== "ACTIVO") return;
                 
-                let ger = col[iGe]?.trim() || "SIN GERENCIA";
-                const ag = col[iAg], fec = col[iDi], mes = col[iMe]?.toUpperCase();
-                const mesId = fec.split('/')[1];
+                // VALIDACIÓN CRÍTICA: Forzar "SIN GERENCIA" si el campo está vacío
+                let ger = (col[iGe] && col[iGe] !== "" && col[iGe] !== "undefined") ? col[iGe] : "SIN GERENCIA";
                 
+                const ag = col[iAg], fec = col[iDi], mesId = fec.split('/')[1];
                 setF.add(fec); setG.add(ger);
-                if(mesId) mesesDisp[mesId] = mes;
+                if(mesId) mesesDisp[mesId] = col[iMe] || "MES";
+
                 if (!dataGlobal[ag]) dataGlobal[ag] = { ag, ger, logs: {} };
                 dataGlobal[ag].logs[fec] = (dataGlobal[ag].logs[fec] || 0) + t2s(col[iHr]);
             });
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-            const mesIds = Object.keys(mesesDisp).sort();
-            document.getElementById('sel_mes').innerHTML = mesIds.map(id => `<option value="${id}">${mesesDisp[id]}</option>`).join('');
             
-            const gerenciasOrdenadas = [...setG].sort();
-            document.getElementById('sel_ger').innerHTML = '<option value="ALL">VISTA GLOBAL (INCLUYE SIN GERENCIA)</option>' + 
-                gerenciasOrdenadas.map(g => `<option value="${g}">${g}</option>`).join('');
+            // Selector Gerencia
+            const sortedGer = [...setG].sort();
+            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + 
+                sortedGer.map(g => `<option value="${g}">${g}</option>`).join('');
             
-            if(mesIds.length) document.getElementById('sel_mes').value = mesIds[mesIds.length - 1];
-            document.getElementById('status_file').innerText = "✅ DATOS ACTUALIZADOS";
+            // Selector Mes
+            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).sort().map(id => `<option value="${id}">${mesesDisp[id]}</option>`).join('');
+            
+            document.getElementById('status_file').innerText = "✅ DATOS SINCRONIZADOS";
             render();
         }
 
@@ -175,101 +163,77 @@
                 const p = f.split('/'); return p[1] === mesSel && parseInt(p[0]) >= dIni && parseInt(p[0]) <= dFin;
             });
 
-            let list = [], timeline = fFilt.map(() => 0), statsGer = {}, totalGeneralS = 0;
-            alertasActuales = [];
+            let list = [], timeline = fFilt.map(() => 0), statsGer = {}, totalS = 0;
 
             Object.values(dataGlobal).forEach(u => {
-                let sum = 0, on = 0, off = 0, boxes = "";
+                let sum = 0, on = 0, boxes = "";
                 fFilt.forEach((f, i) => {
                     const s = u.logs[f] || 0; sum += s; timeline[i] += s;
-                    if(s > 0) on++; else off++;
+                    if(s > 0) on++;
                     boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
                 });
 
                 if (sum === 0 && on === 0) return;
-                
-                if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0, alertas: 0 };
+                if (!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
                 statsGer[u.ger].horas += sum;
                 statsGer[u.ger].ops++;
-                totalGeneralS += sum;
+                totalS += sum;
 
-                if(off > 2 && sum > 0) {
-                    statsGer[u.ger].alertas++;
-                    alertasActuales.push({ag: u.ag, ger: u.ger, off, sum});
-                }
-                
                 if (gerSel === "ALL" || u.ger === gerSel) {
-                    list.push({ ...u, sum, on, off, boxes });
+                    list.push({ ...u, sum, on, boxes });
                 }
             });
 
-            document.getElementById('header_total_hrs').innerText = s2t(totalGeneralS);
-            document.getElementById('header_alertas').innerText = alertasActuales.length;
+            // Actualizar KPIs
+            document.getElementById('header_total_hrs').innerText = s2t(totalS);
             document.getElementById('kpi_count_ejec').innerText = list.length;
-            document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((acc, curr) => acc + curr.sum, 0));
+            document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a, b) => a + b.sum, 0));
 
-            list.sort((a,b) => a.on - b.on);
-
-            const sortedGer = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
-            document.getElementById('cards_container').innerHTML = sortedGer.map(([name, data]) => `
-                <div class="bg-white p-4 rounded-2xl border shadow-sm card-stat ${data.alertas > 3 ? 'card-alert' : ''}">
-                    <p class="text-[8px] font-black text-slate-400 uppercase truncate">${name}</p>
-                    <h3 class="text-lg font-black text-slate-800">${s2t(data.horas)} <span class="text-[9px] text-blue-500">h</span></h3>
-                    <div class="flex justify-between mt-2 border-t border-slate-50 pt-2">
-                        <span class="text-[9px] font-bold text-slate-400">👤 ${data.ops}</span>
-                        <span class="text-[9px] font-bold ${data.alertas > 0 ? 'text-red-500' : 'text-blue-400'}">⚠️ ${data.alertas}</span>
-                    </div>
+            // Render Tarjetas
+            const sGer = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
+            document.getElementById('cards_container').innerHTML = sGer.map(([name, data]) => `
+                <div class="p-5 card-stat shadow-sm border border-slate-100">
+                    <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
+                    <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)} <span class="text-xs text-blue-500">h</span></h3>
+                    <p class="text-[10px] font-bold text-slate-500 mt-2">👤 ${data.ops} Ejecutivos</p>
                 </div>
             `).join('');
 
+            // Tabla
+            list.sort((a,b) => a.on - b.on);
             document.getElementById('table_body').innerHTML = list.map(u => `
                 <tr>
-                    <td class="p-5"><p class="font-black text-slate-700 uppercase leading-none">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold uppercase mt-1">${u.ger}</p></td>
-                    <td class="p-5 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
-                    <td class="p-5 text-center font-black text-blue-600 bg-blue-50/30 text-sm border-x border-white">${u.on}</td>
-                    <td class="p-5 text-right font-black text-slate-600 text-sm">${s2t(u.sum)}</td>
+                    <td class="p-4"><p class="font-black text-slate-700 uppercase">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold">${u.ger}</p></td>
+                    <td class="p-4 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
+                    <td class="p-4 text-center font-black text-blue-600 bg-blue-50/30">${u.on}</td>
+                    <td class="p-4 text-right font-black text-slate-600">${s2t(u.sum)}</td>
                 </tr>
             `).join('');
 
-            // GRÁFICA TENDENCIA CON ETIQUETAS
+            // Gráfico Tendencia
             Plotly.newPlot('chart_main', [{
-                x: fFilt.map(f => f.substring(0,5)), y: timeline.map(v => (v/3600).toFixed(1)), mode: 'lines+markers+text',
-                text: timeline.map(v => (v/3600).toFixed(1) + "h"), textposition: 'top center', 
-                textfont: { family: 'Arial Black', size: 9, color: '#3b82f6' },
-                line: { color: '#3b82f6', width: 3, shape: 'spline' }, 
-                marker: { size: 6, color: '#1e40af' }
-            }], { 
-                title: { text: 'EVOLUCIÓN DE HORAS POR DÍA', font: { family: 'Arial Black', size: 12, color: '#1e293b' } },
-                margin: { l: 40, r: 20, t: 50, b: 40 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-                xaxis: { gridcolor: '#f1f5f9' }, yaxis: { gridcolor: '#f1f5f9' }
-            }, { responsive: true, displayModeBar: false });
+                x: fFilt.map(f => f.substring(0,5)), y: timeline.map(v => (v/3600).toFixed(1)),
+                mode: 'lines+markers+text', text: timeline.map(v => (v/3600).toFixed(1) + "h"),
+                textposition: 'top center', line: { color: '#3b82f6', width: 3 },
+                marker: { size: 8, color: '#1e40af' }
+            }], { title: 'TENDENCIA DE HORAS DIARIAS', margin: {t:50, b:40, l:50, r:20} }, {responsive:true});
 
-            // GRÁFICA BARRAS CON DEGRADADO AZUL Y ETIQUETAS
+            // Gráfico Gerencias (DEGRADADO AZUL Y ETIQUETAS)
             Plotly.newPlot('chart_gerencias', [{
-                y: sortedGer.map(e => e[0]), 
-                x: sortedGer.map(e => (e[1].horas/3600).toFixed(1)), 
-                type: 'bar', orientation: 'h', 
+                y: sGer.map(e => e[0]), x: sGer.map(e => (e[1].horas/3600).toFixed(1)),
+                type: 'bar', orientation: 'h',
                 marker: {
-                    color: sortedGer.map((_, i) => `rgba(59, 130, 246, ${0.4 + (i / sortedGer.length) * 0.6})`),
-                    line: { color: '#3b82f6', width: 1 }
+                    color: sGer.map((_, i) => `rgba(37, 99, 235, ${0.3 + (i / sGer.length) * 0.7})`),
+                    line: { color: '#2563eb', width: 1 }
                 },
-                text: sortedGer.map(e => (e[1].horas/3600).toFixed(1) + " h"),
+                text: sGer.map(e => (e[1].horas/3600).toFixed(1) + " h"),
                 textposition: 'outside',
-                textfont: { family: 'Arial Black', size: 10, color: '#1e40af' }
+                cliponaxis: false
             }], { 
-                title: { text: 'TOTAL HORAS POR GERENCIA', font: { family: 'Arial Black', size: 12, color: '#1e293b' } },
-                margin: { l: 160, r: 60, t: 50, b: 50 }, 
-                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-                xaxis: { title: 'Horas Acumuladas', gridcolor: '#f1f5f9' },
-                yaxis: { gridcolor: 'transparent' }
-            }, { responsive: true, displayModeBar: false });
-        }
-
-        function descargarAlertas() {
-            if(!alertasActuales.length) return alert("Sin alertas.");
-            const ws = XLSX.utils.json_to_sheet(alertasActuales.map(a => ({ Agente: a.ag, Gerencia: a.ger, Dias_OFF: a.off, Horas: s2t(a.sum) })));
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Alertas");
-            XLSX.writeFile(wb, "GMT_Auditoria_Blue.xlsx");
+                title: 'HORAS ACUMULADAS POR GERENCIA', 
+                margin: {l:180, r:80, t:50, b:50},
+                xaxis: { title: 'Horas' }
+            }, {responsive:true});
         }
 
         ['sel_mes', 'sel_ger', 'dia_inicio', 'dia_fin'].forEach(id => {
