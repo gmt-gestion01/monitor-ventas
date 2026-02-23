@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .day-box { width: 19px; height: 19px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
+        .day-box { width: 19px; height: 19px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); }
         .spr-high { background-color: #2563eb; color: white; }
         .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #ffffff; color: #cbd5e1; border: 1px solid #e2e8f0; }
@@ -25,7 +25,6 @@
             <div class="flex flex-wrap justify-center gap-3">
                 <select id="filter_camp" class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-4 py-2 rounded-lg border border-emerald-100 outline-none"></select>
                 <select id="filter_month" class="bg-blue-50 text-blue-700 text-[10px] font-black px-4 py-2 rounded-lg border border-blue-100 outline-none"></select>
-                <select id="filter_week" class="bg-slate-100 text-slate-700 text-[10px] font-black px-4 py-2 rounded-lg border border-slate-200 outline-none"></select>
                 <button id="btn_excel" onclick="generarExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-lg text-[10px] font-black shadow-md uppercase hover:bg-emerald-700 transition-colors">📊 EXCEL</button>
             </div>
         </div>
@@ -35,25 +34,24 @@
                 <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-slate-400 uppercase">Sprinklr</p><p id="k_spr" class="text-lg font-black text-blue-600">0:00:00</p></div>
                 <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-slate-400 uppercase">Vicidial</p><p id="k_vic" class="text-lg font-black text-orange-600">0:00:00</p></div>
                 <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-slate-400 uppercase">Total Selección</p><p id="k_tot" class="text-lg font-black text-slate-800">0:00:00</p></div>
-                <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-red-500 uppercase italic">Críticos</p><p id="k_inact" class="text-lg font-black text-red-600">0</p></div>
+                <div class="bg-white p-4 rounded-xl border shadow-sm"><p class="text-[9px] font-bold text-red-500 uppercase italic">Críticos (+2d Off)</p><p id="k_inact" class="text-lg font-black text-red-600">0</p></div>
             </div>
 
-            <div class="bg-slate-800 text-white p-4 rounded-xl shadow-lg mb-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div><p class="text-[8px] opacity-60 uppercase font-bold">Acumulado</p><p id="acum_sem" class="text-sm font-black text-orange-400">0h</p></div>
-                <div><p class="text-[8px] opacity-60 uppercase font-bold">Días</p><p id="acum_dias" class="text-sm font-black text-white">0</p></div>
-                <div><p class="text-[8px] opacity-60 uppercase font-bold">Promedio</p><p id="acum_prom" class="text-sm font-black text-emerald-400">0h</p></div>
-                <div><p class="text-[8px] opacity-60 uppercase font-bold">Status Data</p><p id="data_status" class="text-sm font-black text-blue-400">CONECTANDO...</p></div>
+            <div class="bg-slate-800 text-white p-4 rounded-xl shadow-lg mb-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+                <div><p class="text-[8px] opacity-60 uppercase font-bold">Días en Periodo</p><p id="acum_dias" class="text-sm font-black text-white">0</p></div>
+                <div><p class="text-[8px] opacity-60 uppercase font-bold">Promedio Diario</p><p id="acum_prom" class="text-sm font-black text-emerald-400">0h</p></div>
+                <div><p class="text-[8px] opacity-60 uppercase font-bold">Status Data</p><p id="data_status" class="text-sm font-black text-blue-400">CARGANDO...</p></div>
             </div>
 
             <div id="alerta_panel" class="hidden bg-white border border-red-200 rounded-xl mb-6 overflow-hidden shadow-sm">
                 <div class="bg-red-600 p-3 flex flex-col md:flex-row justify-between items-center gap-2">
-                    <span class="text-white text-[10px] font-black uppercase tracking-widest">⚠️ ALERTAS DE INACTIVIDAD</span>
+                    <span class="text-white text-[10px] font-black uppercase tracking-widest">⚠️ ALERTAS DE INACTIVIDAD CRÍTICA</span>
                     <input type="text" id="search_user" placeholder="BUSCAR EJECUTIVO..." class="bg-white/20 text-white placeholder-white/60 text-[9px] px-3 py-1 rounded-lg border border-white/30 outline-none focus:bg-white focus:text-slate-900 w-full md:w-48 uppercase font-bold">
                 </div>
                 <div class="max-h-60 overflow-y-auto">
                     <table class="w-full text-[10px] text-left">
                         <thead class="sticky-thead font-bold uppercase text-slate-500">
-                            <tr><th class="p-3">Ejecutivo</th><th class="p-3 text-center">Activos</th><th class="p-3 text-center">Inactividad</th><th class="p-3">Cnx Total</th><th class="p-3">Gerencia</th></tr>
+                            <tr><th class="p-3">Ejecutivo</th><th class="p-3 text-center">Activos</th><th class="p-3 text-center">Inactividad</th><th class="p-3">Cnx Total</th><th class="p-3">Campaña</th></tr>
                         </thead>
                         <tbody id="t_body_alerts" class="divide-y divide-slate-100"></tbody>
                     </table>
@@ -84,77 +82,97 @@
     <script>
         let rawDataFRows = [], globalDates = [], groupedData = {}, monthsFound = {};
 
-        // CARGA AUTOMÁTICA AL INICIAR
         window.onload = () => cargarDataAutomaticamente();
 
-        function cargarDataAutomaticamente() {
-            fetch('data.csv') 
-                .then(res => res.text())
-                .then(csv => { 
-                    procesarCSV(csv); 
-                    document.getElementById('data_status').innerText = "DATA OK"; 
-                })
-                .catch(() => { document.getElementById('data_status').innerText = "ERROR CSV"; });
+        async function cargarDataAutomaticamente() {
+            const archivos = ['data_01.csv', 'data_02.csv'];
+            let csvCompleto = "";
+            
+            for (let f of archivos) {
+                try {
+                    const res = await fetch(f);
+                    if(res.ok) csvCompleto += await res.text() + "\n";
+                } catch(e) { console.warn("Archivo no encontrado: " + f); }
+            }
+
+            if(csvCompleto.length > 10) {
+                procesarCSV(csvCompleto);
+                document.getElementById('data_status').innerText = "DATA CARGADA";
+            } else {
+                document.getElementById('data_status').innerText = "ERROR CSV";
+            }
         }
 
         function tToSec(t) { 
-            if(!t) return 0;
+            if(!t || t === "0") return 0;
             const p = t.toString().replace(/['"]+/g, '').trim().split(':');
             if(p.length < 2) return 0;
             return (parseInt(p[0]) || 0) * 3600 + (parseInt(p[1]) || 0) * 60 + (parseInt(p[2]) || 0);
         }
 
         function secToT(s) { 
-            const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sc = s%60;
-            return `${h}:${m.toString().padStart(2,'0')}:${sc.toString().padStart(2,'0')}`; 
+            const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+            return `${h}:${m.toString().padStart(2,'0')}:00`; 
         }
 
         function procesarCSV(csvText) {
-            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
-            if(lines.length < 2) return;
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 10);
+            if(lines.length < 1) return;
+
             const sep = lines[0].includes(';') ? ';' : ',';
             const headers = lines[0].split(sep);
-            globalDates = headers.slice(9).map(d => d.trim().replace(/['"]+/g, ''));
             
-            monthsFound = {};
-            globalDates.forEach((d, idx) => {
-                const m = d.split('/')[1];
-                if(m) {
-                    if(!monthsFound[m]) monthsFound[m] = { name: "MES "+m, indices: [] };
-                    monthsFound[m].indices.push(idx);
-                }
-            });
+            // Extraer fechas (desde columna 10 / index 9)
+            const nuevasFechas = headers.slice(9).map(d => d.trim().replace(/['"]+/g, '')).filter(f => f !== "");
+            globalDates = [...new Set([...globalDates, ...nuevasFechas])].sort();
+            
+            rawDataFRows = []; 
+            groupedData = {}; 
+            let caps = new Set();
+            let gers = new Set();
 
-            const ms = document.getElementById('filter_month');
-            ms.innerHTML = '<option value="ALL">TOTAL PERIODO</option>';
-            Object.keys(monthsFound).sort().forEach(m => ms.innerHTML += `<option value="${m}">${monthsFound[m].name}</option>`);
+            lines.forEach((line, idx) => {
+                if(line.includes("SISTEMA,USER")) return; // Ignorar cabeceras repetidas
+                const c = line.split(sep);
+                if (c.length < 10) return;
 
-            rawDataFRows = []; groupedData = {}; let caps = new Set();
-            lines.slice(1).forEach(line => {
-                const c = line.split(sep); if (c.length < 10) return;
                 const sis = c[0].replace(/['"]+/g, '').toUpperCase().trim(); 
                 const name = c[1].replace(/['"]+/g, '').trim(); 
-                const ger = (c[3] || '').replace(/['"]+/g, '').trim().toUpperCase() || "#N/D";
-                const camp = (c[4] || '').replace(/['"]+/g, '').trim().toUpperCase() || "#N/D";
+                const ger = (c[3] || 'S/G').replace(/['"]+/g, '').trim().toUpperCase();
+                const camp = (c[4] || 'S/C').replace(/['"]+/g, '').trim().toUpperCase();
                 const daily = c.slice(9);
+
                 caps.add(camp);
-                rawDataFRows.push({ sis, name, ger, camp, daily });
-                if(!groupedData[name]) groupedData[name] = { name, ger, camp, systems: {} };
-                groupedData[name].systems[sis] = { daily };
+                gers.add(ger);
+
+                if(!groupedData[name]) {
+                    groupedData[name] = { name, ger, camp, systems: {} };
+                }
+                if(!groupedData[name].systems[sis]) {
+                    groupedData[name].systems[sis] = {};
+                }
+
+                // Mapear datos a fechas reales
+                const fechasArchivo = headers.slice(9);
+                fechasArchivo.forEach((f, i) => {
+                    if(f.trim()) groupedData[name].systems[sis][f.trim()] = daily[i] || "00:00:00";
+                });
             });
 
+            // Poblar Filtros
             document.getElementById('filter_camp').innerHTML = '<option value="">TODAS LAS CAMPAÑAS</option>' + [...caps].sort().map(x => `<option value="${x}">${x}</option>`).join('');
-            const gers = [...new Set(rawDataFRows.map(d => d.ger))].sort();
-            document.getElementById('filter_ger').innerHTML = '<option value="">-- SELECCIONAR GERENCIA --</option>' + gers.map(g => `<option value="${g}">${g}</option>`).join('');
-            actualizarSemanas();
-        }
+            document.getElementById('filter_ger').innerHTML = '<option value="">-- SELECCIONAR GERENCIA --</option>' + [...gers].sort().map(g => `<option value="${g}">${g}</option>`).join('');
+            
+            // Poblar Meses
+            monthsFound = {};
+            globalDates.forEach(d => {
+                const m = d.split('/')[1];
+                if(m && !monthsFound[m]) monthsFound[m] = "MES " + m;
+            });
+            const ms = document.getElementById('filter_month');
+            ms.innerHTML = '<option value="ALL">TOTAL PERIODO</option>';
+            Object.keys(monthsFound).forEach(m => ms.innerHTML += `<option value="${m}">${monthsFound[m]}</option>`);
 
-        function actualizarSemanas() {
-            const mKey = document.getElementById('filter_month').value;
-            const ws = document.getElementById('filter_week');
-            let baseDates = mKey === "ALL" ? globalDates : (monthsFound[mKey]?.indices || []);
-            ws.innerHTML = '<option value="ALL">VISTA MENSUAL</option>';
-            for(let i=0; i < Math.ceil(baseDates.length/7); i++) ws.innerHTML += `<option value="${i}">SEM ${i+1}</option>`;
             renderDashboard(); 
         }
 
@@ -162,82 +180,89 @@
             const ger = document.getElementById('filter_ger').value;
             const camp = document.getElementById('filter_camp').value;
             const m = document.getElementById('filter_month').value;
-            const w = document.getElementById('filter_week').value;
             const query = document.getElementById('search_user').value.toUpperCase();
 
-            let rango = m === "ALL" ? globalDates.map((_,i)=>i) : (monthsFound[m]?.indices || []);
-            if(w !== "ALL") rango = rango.slice(parseInt(w)*7, (parseInt(w)+1)*7);
+            let rangoFechas = m === "ALL" ? globalDates : globalDates.filter(d => d.split('/')[1] === m);
 
-            let s_spr = 0, s_vic = 0, s_total = 0, sprV = [], vicV = [], labels = [];
+            let s_spr = 0, s_vic = 0, alertCount = 0;
+            let sprV = [], vicV = [], labels = [];
             const campMap = {};
-            let filtered = rawDataFRows.filter(r => (!ger || r.ger === ger) && (!camp || r.camp === camp));
+            let alertHtml = "";
 
-            rango.forEach(idx => {
-                labels.push(globalDates[idx].substring(0,5));
-                let dS = 0, dV = 0;
-                filtered.forEach(r => {
-                    const s = tToSec(r.daily[idx]);
-                    if(r.sis.includes('SPRINKLR')) dS += s; else dV += s;
-                    if(s > 0) {
-                        if(!campMap[r.camp]) campMap[r.camp] = { s: 0, sis: r.sis };
-                        campMap[r.camp].s += s;
-                    }
+            Object.values(groupedData).forEach(u => {
+                if((ger && u.ger !== ger) || (camp && u.camp !== camp)) return;
+
+                let uTotalSec = 0, uDaysOff = 0;
+                
+                rangoFechas.forEach(f => {
+                    let dSec = 0;
+                    Object.keys(u.systems).forEach(s => {
+                        const sec = tToSec(u.systems[s][f]);
+                        dSec += sec;
+                        if(s.includes('SPRINKLR')) s_spr += sec; else s_vic += sec;
+                    });
+                    if(dSec === 0) uDaysOff++;
+                    uTotalSec += dSec;
                 });
-                s_spr += dS; s_vic += dV; s_total += (dS + dV);
+
+                // Alertas de Inactividad
+                if(uDaysOff >= 2 && uTotalSec > 0) {
+                    alertCount++;
+                    if(!query || u.name.toUpperCase().includes(query)) {
+                        alertHtml += `<tr class="hover:bg-slate-50"><td class="p-3 font-bold uppercase">${u.name}</td><td class="p-3 text-center text-blue-600">${rangoFechas.length - uDaysOff}D</td><td class="p-3 text-center text-red-600 font-black bg-red-50">${uDaysOff}D</td><td class="p-3 font-bold">${secToT(uTotalSec)}</td><td class="p-3 uppercase text-slate-500">${u.camp}</td></tr>`;
+                    }
+                }
+            });
+
+            // Preparar datos para gráfica semanal (basado en rango seleccionado)
+            rangoFechas.forEach(f => {
+                labels.push(f.substring(0,5));
+                let dS = 0, dV = 0;
+                Object.values(groupedData).forEach(u => {
+                    if((ger && u.ger !== ger) || (camp && u.camp !== camp)) return;
+                    Object.keys(u.systems).forEach(s => {
+                        const sec = tToSec(u.systems[s][f]);
+                        if(s.includes('SPRINKLR')) dS += sec; else dV += sec;
+                    });
+                });
                 sprV.push((dS/3600).toFixed(1)); vicV.push((dV/3600).toFixed(1));
             });
 
+            // Update UI
             document.getElementById('k_spr').innerText = secToT(s_spr);
             document.getElementById('k_vic').innerText = secToT(s_vic);
-            document.getElementById('k_tot').innerText = secToT(s_total);
-            document.getElementById('acum_sem').innerText = (s_total/3600).toFixed(1) + "h";
-            document.getElementById('acum_dias').innerText = rango.length;
-            document.getElementById('acum_prom').innerText = ((s_total/3600)/(rango.length || 1)).toFixed(1) + "h/d";
+            document.getElementById('k_tot').innerText = secToT(s_spr + s_vic);
+            document.getElementById('k_inact').innerText = alertCount;
+            document.getElementById('acum_dias').innerText = rangoFechas.length;
+            document.getElementById('acum_prom').innerText = (((s_spr+s_vic)/3600)/(rangoFechas.length || 1)).toFixed(1) + "h/d";
+            document.getElementById('t_body_alerts').innerHTML = alertHtml;
+            document.getElementById('alerta_panel').classList.toggle('hidden', alertCount === 0 && query === "");
 
+            // Graficar
             Plotly.newPlot('g_weekly', [
                 { x: labels, y: sprV, name: 'Sprinklr', type: 'scatter', mode: 'lines+markers', line: {color: '#2563eb'} },
                 { x: labels, y: vicV, name: 'Vicidial', type: 'scatter', mode: 'lines+markers', line: {color: '#f97316'} }
-            ], { title: 'EVOLUCIÓN DIARIA', margin: {t:30, b:30, l:30, r:10} }, {responsive: true});
+            ], { title: 'EVOLUCIÓN HORAS DIARIAS', margin: {t:40, b:40, l:40, r:10} }, {responsive: true});
 
             Plotly.newPlot('g_pie', [{ labels: ['Sprinklr', 'Vicidial'], values: [s_spr, s_vic], type: 'pie', marker: {colors: ['#2563eb', '#f97316']} }], {title: 'MIX SISTEMAS'}, {responsive: true});
 
-            const sortedC = Object.keys(campMap).map(k => ({n: k, s: (campMap[k].s/3600).toFixed(1)})).sort((a,b) => a.s - b.s).slice(-10);
-            Plotly.newPlot('g_bar', [{ x: sortedC.map(x => x.s), y: sortedC.map(x => x.n), type: 'bar', orientation: 'h' }], {title: 'TOP CAMPAÑAS'}, {responsive: true});
-
-            renderAlerts(rango, query);
-            if(ger) renderCalendar(ger, rango, query);
+            if(ger) renderCalendar(ger, rangoFechas, query);
         }
 
-        function renderAlerts(rango, query) {
-            const ger = document.getElementById('filter_ger').value;
+        function renderCalendar(ger, rangoFechas, query) {
             const camp = document.getElementById('filter_camp').value;
-            const alerts = Object.values(groupedData).map(u => {
-                let dAct = 0, tSec = 0;
-                rango.forEach(idx => {
-                    let dC = 0; Object.values(u.systems).forEach(sys => dC += tToSec(sys.daily[idx]));
-                    if(dC > 0) dAct++; tSec += dC;
-                });
-                return { ...u, tSec, dAct, inact: rango.length - dAct };
-            }).filter(x => x.tSec > 0 && x.inact >= 2 && (!ger || x.ger === ger) && (!camp || x.camp === camp) && x.name.toUpperCase().includes(query));
-
-            document.getElementById('k_inact').innerText = alerts.length;
-            document.getElementById('alerta_panel').classList.toggle('hidden', alerts.length === 0 && query === "");
-            document.getElementById('t_body_alerts').innerHTML = alerts.sort((a,b)=>b.inact - a.inact).map(i => `
-                <tr class="hover:bg-slate-50"><td class="p-3 font-bold uppercase">${i.name}</td><td class="p-3 text-center text-blue-600">${i.dAct}D</td><td class="p-3 text-center text-red-600 font-black bg-red-50">${i.inact}D</td><td class="p-3 font-bold">${secToT(i.tSec)}</td><td class="p-3 uppercase text-slate-500">${i.ger}</td></tr>`).join('');
-        }
-
-        function renderCalendar(ger, rango, query) {
-            const camp = document.getElementById('filter_camp').value;
-            const f = Object.values(groupedData).filter(d => d.ger === ger && d.name.toUpperCase().includes(query) && (!camp || d.camp === camp)).sort((a,b)=>a.name.localeCompare(b.name));
+            const filtrados = Object.values(groupedData).filter(u => u.ger === ger && (!camp || u.camp === camp) && u.name.toUpperCase().includes(query)).sort((a,b)=>a.name.localeCompare(b.name));
+            
             let h = "";
-            f.forEach(d => {
-                h += `<tr class="bg-slate-800 text-white font-bold text-[9px]"><td colspan="2" class="p-2 pl-4 uppercase">${d.name}</td></tr>`;
-                Object.keys(d.systems).forEach(s => {
-                    const dots = rango.map(idx => {
-                        const v = d.systems[s].daily[idx];
-                        return `<div class="day-box ${tToSec(v)>0?(s.includes('SPRINKLR')?'spr-high':'vic-high'):'day-off'}">${globalDates[idx].split('/')[0]}</div>`;
+            filtrados.forEach(u => {
+                h += `<tr class="bg-slate-800 text-white font-bold text-[9px]"><td colspan="2" class="p-2 pl-4 uppercase">${u.name} <span class="opacity-40 ml-2">(${u.camp})</span></td></tr>`;
+                Object.keys(u.systems).forEach(s => {
+                    const dots = rangoFechas.map(f => {
+                        const v = u.systems[s][f] || "00:00:00";
+                        const css = tToSec(v) > 0 ? (s.includes('SPRINKLR') ? 'spr-high' : 'vic-high') : 'day-off';
+                        return `<div class="day-box ${css}" title="${f}: ${v}">${f.split('/')[0]}</div>`;
                     }).join('');
-                    h += `<tr><td class="p-2 text-[8px] pl-6 w-24 text-slate-400 font-bold">${s}</td><td class="p-2 flex flex-wrap gap-1">${dots}</td></tr>`;
+                    h += `<tr><td class="p-2 text-[8px] pl-6 w-24 text-slate-400 font-bold">${s.split(' ')[0]}</td><td class="p-2 flex flex-wrap gap-1">${dots}</td></tr>`;
                 });
             });
             document.getElementById('t_body_calendar').innerHTML = h;
@@ -246,23 +271,22 @@
 
         document.getElementById('search_user').oninput = () => renderDashboard();
         document.getElementById('filter_camp').onchange = () => renderDashboard();
-        document.getElementById('filter_month').onchange = () => actualizarSemanas();
-        document.getElementById('filter_week').onchange = () => renderDashboard();
+        document.getElementById('filter_month').onchange = () => renderDashboard();
         document.getElementById('filter_ger').onchange = () => renderDashboard();
 
         function generarExcel() {
             const data = Object.values(groupedData).map(u => {
                 let sec = 0, act = 0;
-                globalDates.forEach((_,i) => {
-                    let dC = 0; Object.values(u.systems).forEach(sys => dC += tToSec(sys.daily[i]));
+                globalDates.forEach(f => {
+                    let dC = 0; Object.values(u.systems).forEach(sys => dC += tToSec(sys[f]));
                     if(dC > 0) act++; sec += dC;
                 });
                 return { "EJECUTIVO": u.name, "GERENCIA": u.ger, "CAMPAÑA": u.camp, "TOTAL": secToT(sec), "DÍAS ACT": act };
             });
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Horas");
-            XLSX.writeFile(wb, "GMT_HORAS.xlsx");
+            XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+            XLSX.writeFile(wb, "GMT_AUDITORIA.xlsx");
         }
     </script>
 </body>
