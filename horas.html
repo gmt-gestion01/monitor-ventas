@@ -122,7 +122,6 @@
             const sep = lines[0].includes(';') ? ';' : ',';
             const headers = lines[0].split(sep);
             
-            // Extraer fechas (desde columna 10 / index 9)
             const nuevasFechas = headers.slice(9).map(d => d.trim().replace(/['"]+/g, '')).filter(f => f !== "");
             globalDates = [...new Set([...globalDates, ...nuevasFechas])].sort();
             
@@ -132,7 +131,7 @@
             let gers = new Set();
 
             lines.forEach((line, idx) => {
-                if(line.includes("SISTEMA,USER")) return; // Ignorar cabeceras repetidas
+                if(line.includes("SISTEMA,USER")) return; 
                 const c = line.split(sep);
                 if (c.length < 10) return;
 
@@ -152,18 +151,15 @@
                     groupedData[name].systems[sis] = {};
                 }
 
-                // Mapear datos a fechas reales
                 const fechasArchivo = headers.slice(9);
                 fechasArchivo.forEach((f, i) => {
                     if(f.trim()) groupedData[name].systems[sis][f.trim()] = daily[i] || "00:00:00";
                 });
             });
 
-            // Poblar Filtros
             document.getElementById('filter_camp').innerHTML = '<option value="">TODAS LAS CAMPAÑAS</option>' + [...caps].sort().map(x => `<option value="${x}">${x}</option>`).join('');
             document.getElementById('filter_ger').innerHTML = '<option value="">-- SELECCIONAR GERENCIA --</option>' + [...gers].sort().map(g => `<option value="${g}">${g}</option>`).join('');
             
-            // Poblar Meses
             monthsFound = {};
             globalDates.forEach(d => {
                 const m = d.split('/')[1];
@@ -186,7 +182,6 @@
 
             let s_spr = 0, s_vic = 0, alertCount = 0;
             let sprV = [], vicV = [], labels = [];
-            const campMap = {};
             let alertHtml = "";
 
             Object.values(groupedData).forEach(u => {
@@ -205,7 +200,6 @@
                     uTotalSec += dSec;
                 });
 
-                // Alertas de Inactividad
                 if(uDaysOff >= 2 && uTotalSec > 0) {
                     alertCount++;
                     if(!query || u.name.toUpperCase().includes(query)) {
@@ -214,7 +208,6 @@
                 }
             });
 
-            // Preparar datos para gráfica semanal (basado en rango seleccionado)
             rangoFechas.forEach(f => {
                 labels.push(f.substring(0,5));
                 let dS = 0, dV = 0;
@@ -228,7 +221,6 @@
                 sprV.push((dS/3600).toFixed(1)); vicV.push((dV/3600).toFixed(1));
             });
 
-            // Update UI
             document.getElementById('k_spr').innerText = secToT(s_spr);
             document.getElementById('k_vic').innerText = secToT(s_vic);
             document.getElementById('k_tot').innerText = secToT(s_spr + s_vic);
@@ -238,13 +230,44 @@
             document.getElementById('t_body_alerts').innerHTML = alertHtml;
             document.getElementById('alerta_panel').classList.toggle('hidden', alertCount === 0 && query === "");
 
-            // Graficar
+            // --- GRÁFICAS CORREGIDAS CON ETIQUETAS ---
+
+            // Evolución con etiquetas en cada punto
             Plotly.newPlot('g_weekly', [
-                { x: labels, y: sprV, name: 'Sprinklr', type: 'scatter', mode: 'lines+markers', line: {color: '#2563eb'} },
-                { x: labels, y: vicV, name: 'Vicidial', type: 'scatter', mode: 'lines+markers', line: {color: '#f97316'} }
+                { 
+                    x: labels, y: sprV, name: 'Sprinklr', type: 'scatter', 
+                    mode: 'lines+markers+text', 
+                    text: sprV.map(v => v > 0 ? v : ""), 
+                    textposition: 'top center',
+                    line: {color: '#2563eb'} 
+                },
+                { 
+                    x: labels, y: vicV, name: 'Vicidial', type: 'scatter', 
+                    mode: 'lines+markers+text', 
+                    text: vicV.map(v => v > 0 ? v : ""), 
+                    textposition: 'bottom center',
+                    line: {color: '#f97316'} 
+                }
             ], { title: 'EVOLUCIÓN HORAS DIARIAS', margin: {t:40, b:40, l:40, r:10} }, {responsive: true});
 
-            Plotly.newPlot('g_pie', [{ labels: ['Sprinklr', 'Vicidial'], values: [s_spr, s_vic], type: 'pie', marker: {colors: ['#2563eb', '#f97316']} }], {title: 'MIX SISTEMAS'}, {responsive: true});
+            // Nueva Gráfica de Barras con etiquetas (la que faltaba)
+            Plotly.newPlot('g_bar', [{
+                x: ['Sprinklr', 'Vicidial'],
+                y: [s_spr/3600, s_vic/3600],
+                type: 'bar',
+                text: [(s_spr/3600).toFixed(1) + 'h', (s_vic/3600).toFixed(1) + 'h'],
+                textposition: 'auto',
+                marker: { color: ['#2563eb', '#f97316'] }
+            }], { title: 'TOTAL HORAS SISTEMA', margin: {t:40, b:40, l:40, r:10} }, {responsive: true});
+
+            // Pie con porcentajes y valores
+            Plotly.newPlot('g_pie', [{ 
+                labels: ['Sprinklr', 'Vicidial'], 
+                values: [s_spr, s_vic], 
+                type: 'pie', 
+                textinfo: 'label+percent',
+                marker: {colors: ['#2563eb', '#f97316']} 
+            }], {title: 'MIX SISTEMAS'}, {responsive: true});
 
             if(ger) renderCalendar(ger, rangoFechas, query);
         }
