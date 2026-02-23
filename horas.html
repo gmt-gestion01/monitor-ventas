@@ -19,7 +19,7 @@
     <div id="dashboard_wrapper" class="max-w-7xl mx-auto">
         <div class="bg-white p-6 rounded-xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
             <div class="text-center lg:text-left">
-                <h1 class="text-xl font-black uppercase text-slate-900">GMT CONTROL | <span class="text-blue-600">DETALLE DE HORAS</span></h1>
+                <h1 class="text-xl font-black uppercase text-slate-900">GMT CONTROL | <span id="txt_month" class="text-blue-600">DETALLE DE HORAS</span></h1>
                 <p class="text-[10px] font-bold text-slate-400 uppercase italic">Auditoría de Conexión 2026</p>
             </div>
             <div class="flex flex-wrap justify-center gap-3">
@@ -81,20 +81,20 @@
 
     <script>
         let rawDataFRows = [], globalDates = [], groupedData = {}, monthsFound = {};
+        // Diccionario para nombres de meses
+        const monthNames = { "01": "ENERO", "02": "FEBRERO", "03": "MARZO", "04": "ABRIL", "05": "MAYO", "06": "JUNIO", "07": "JULIO", "08": "AGOSTO", "09": "SEPTIEMBRE", "10": "OCTUBRE", "11": "NOVIEMBRE", "12": "DICIEMBRE" };
 
         window.onload = () => cargarDataAutomaticamente();
 
         async function cargarDataAutomaticamente() {
             const archivos = ['data_01.csv', 'data_02.csv'];
             let csvCompleto = "";
-            
             for (let f of archivos) {
                 try {
                     const res = await fetch(f);
                     if(res.ok) csvCompleto += await res.text() + "\n";
                 } catch(e) { console.warn("Archivo no encontrado: " + f); }
             }
-
             if(csvCompleto.length > 10) {
                 procesarCSV(csvCompleto);
                 document.getElementById('data_status').innerText = "DATA CARGADA";
@@ -118,10 +118,8 @@
         function procesarCSV(csvText) {
             const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 10);
             if(lines.length < 1) return;
-
             const sep = lines[0].includes(';') ? ';' : ',';
             const headers = lines[0].split(sep);
-            
             const nuevasFechas = headers.slice(9).map(d => d.trim().replace(/['"]+/g, '')).filter(f => f !== "");
             globalDates = [...new Set([...globalDates, ...nuevasFechas])].sort();
             
@@ -134,23 +132,19 @@
                 if(line.includes("SISTEMA,USER")) return; 
                 const c = line.split(sep);
                 if (c.length < 10) return;
-
                 const sis = c[0].replace(/['"]+/g, '').toUpperCase().trim(); 
                 const name = c[1].replace(/['"]+/g, '').trim(); 
                 const ger = (c[3] || 'S/G').replace(/['"]+/g, '').trim().toUpperCase();
                 const camp = (c[4] || 'S/C').replace(/['"]+/g, '').trim().toUpperCase();
                 const daily = c.slice(9);
-
                 caps.add(camp);
                 gers.add(ger);
-
                 if(!groupedData[name]) {
                     groupedData[name] = { name, ger, camp, systems: {} };
                 }
                 if(!groupedData[name].systems[sis]) {
                     groupedData[name].systems[sis] = {};
                 }
-
                 const fechasArchivo = headers.slice(9);
                 fechasArchivo.forEach((f, i) => {
                     if(f.trim()) groupedData[name].systems[sis][f.trim()] = daily[i] || "00:00:00";
@@ -160,10 +154,11 @@
             document.getElementById('filter_camp').innerHTML = '<option value="">TODAS LAS CAMPAÑAS</option>' + [...caps].sort().map(x => `<option value="${x}">${x}</option>`).join('');
             document.getElementById('filter_ger').innerHTML = '<option value="">-- SELECCIONAR GERENCIA --</option>' + [...gers].sort().map(g => `<option value="${g}">${g}</option>`).join('');
             
+            // --- Mejora en Nombres de Meses ---
             monthsFound = {};
             globalDates.forEach(d => {
                 const m = d.split('/')[1];
-                if(m && !monthsFound[m]) monthsFound[m] = "MES " + m;
+                if(m && !monthsFound[m]) monthsFound[m] = monthNames[m] || "MES " + m;
             });
             const ms = document.getElementById('filter_month');
             ms.innerHTML = '<option value="ALL">TOTAL PERIODO</option>';
@@ -178,6 +173,10 @@
             const m = document.getElementById('filter_month').value;
             const query = document.getElementById('search_user').value.toUpperCase();
 
+            // --- Título Dinámico ---
+            const labelMes = m === "ALL" ? "DETALLE DE HORAS" : (monthsFound[m] || "DETALLE DE HORAS");
+            document.getElementById('txt_month').innerText = labelMes;
+
             let rangoFechas = m === "ALL" ? globalDates : globalDates.filter(d => d.split('/')[1] === m);
 
             let s_spr = 0, s_vic = 0, alertCount = 0;
@@ -186,9 +185,7 @@
 
             Object.values(groupedData).forEach(u => {
                 if((ger && u.ger !== ger) || (camp && u.camp !== camp)) return;
-
                 let uTotalSec = 0, uDaysOff = 0;
-                
                 rangoFechas.forEach(f => {
                     let dSec = 0;
                     Object.keys(u.systems).forEach(s => {
@@ -199,7 +196,6 @@
                     if(dSec === 0) uDaysOff++;
                     uTotalSec += dSec;
                 });
-
                 if(uDaysOff >= 2 && uTotalSec > 0) {
                     alertCount++;
                     if(!query || u.name.toUpperCase().includes(query)) {
@@ -230,44 +226,16 @@
             document.getElementById('t_body_alerts').innerHTML = alertHtml;
             document.getElementById('alerta_panel').classList.toggle('hidden', alertCount === 0 && query === "");
 
-            // --- GRÁFICAS CORREGIDAS CON ETIQUETAS ---
-
-            // Evolución con etiquetas en cada punto
             Plotly.newPlot('g_weekly', [
-                { 
-                    x: labels, y: sprV, name: 'Sprinklr', type: 'scatter', 
-                    mode: 'lines+markers+text', 
-                    text: sprV.map(v => v > 0 ? v : ""), 
-                    textposition: 'top center',
-                    line: {color: '#2563eb'} 
-                },
-                { 
-                    x: labels, y: vicV, name: 'Vicidial', type: 'scatter', 
-                    mode: 'lines+markers+text', 
-                    text: vicV.map(v => v > 0 ? v : ""), 
-                    textposition: 'bottom center',
-                    line: {color: '#f97316'} 
-                }
+                { x: labels, y: sprV, name: 'Sprinklr', type: 'scatter', mode: 'lines+markers+text', text: sprV.map(v => v > 0 ? v : ""), textposition: 'top center', line: {color: '#2563eb'} },
+                { x: labels, y: vicV, name: 'Vicidial', type: 'scatter', mode: 'lines+markers+text', text: vicV.map(v => v > 0 ? v : ""), textposition: 'bottom center', line: {color: '#f97316'} }
             ], { title: 'EVOLUCIÓN HORAS DIARIAS', margin: {t:40, b:40, l:40, r:10} }, {responsive: true});
 
-            // Nueva Gráfica de Barras con etiquetas (la que faltaba)
             Plotly.newPlot('g_bar', [{
-                x: ['Sprinklr', 'Vicidial'],
-                y: [s_spr/3600, s_vic/3600],
-                type: 'bar',
-                text: [(s_spr/3600).toFixed(1) + 'h', (s_vic/3600).toFixed(1) + 'h'],
-                textposition: 'auto',
-                marker: { color: ['#2563eb', '#f97316'] }
+                x: ['Sprinklr', 'Vicidial'], y: [s_spr/3600, s_vic/3600], type: 'bar', text: [(s_spr/3600).toFixed(1) + 'h', (s_vic/3600).toFixed(1) + 'h'], textposition: 'auto', marker: { color: ['#2563eb', '#f97316'] }
             }], { title: 'TOTAL HORAS SISTEMA', margin: {t:40, b:40, l:40, r:10} }, {responsive: true});
 
-            // Pie con porcentajes y valores
-            Plotly.newPlot('g_pie', [{ 
-                labels: ['Sprinklr', 'Vicidial'], 
-                values: [s_spr, s_vic], 
-                type: 'pie', 
-                textinfo: 'label+percent',
-                marker: {colors: ['#2563eb', '#f97316']} 
-            }], {title: 'MIX SISTEMAS'}, {responsive: true});
+            Plotly.newPlot('g_pie', [{ labels: ['Sprinklr', 'Vicidial'], values: [s_spr, s_vic], type: 'pie', textinfo: 'label+percent', marker: {colors: ['#2563eb', '#f97316']} }], {title: 'MIX SISTEMAS'}, {responsive: true});
 
             if(ger) renderCalendar(ger, rangoFechas, query);
         }
@@ -275,7 +243,6 @@
         function renderCalendar(ger, rangoFechas, query) {
             const camp = document.getElementById('filter_camp').value;
             const filtrados = Object.values(groupedData).filter(u => u.ger === ger && (!camp || u.camp === camp) && u.name.toUpperCase().includes(query)).sort((a,b)=>a.name.localeCompare(b.name));
-            
             let h = "";
             filtrados.forEach(u => {
                 h += `<tr class="bg-slate-800 text-white font-bold text-[9px]"><td colspan="2" class="p-2 pl-4 uppercase">${u.name} <span class="opacity-40 ml-2">(${u.camp})</span></td></tr>`;
