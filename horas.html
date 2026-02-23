@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT CONTROL | Sprinklr Activos</title>
+    <title>GMT AUDIT | Activos Sprinklr</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .day-box { width: 20px; height: 20px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); }
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
-        .sticky-thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; border-bottom: 2px solid #e2e8f0; }
+        .sticky-thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 20; border-bottom: 2px solid #e2e8f0; }
     </style>
 </head>
 <body class="bg-slate-100 p-4 md:p-8">
@@ -17,15 +17,15 @@
     <div class="max-w-7xl mx-auto">
         <div class="bg-white p-6 rounded-2xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-xl font-black uppercase tracking-tighter text-slate-900">GMT <span class="text-blue-600">SPRINKLR</span></h1>
-                <p id="file_status" class="text-[10px] font-bold text-red-500 uppercase">📊 Solo Personal Activo</p>
+                <h1 class="text-xl font-black uppercase tracking-tighter text-slate-900 italic">GMT <span class="text-blue-600">SPRINKLR</span> AUDIT</h1>
+                <p id="file_status" class="text-[10px] font-bold text-red-500 uppercase">Cargar HORAS_ACUMULADO_HC_1.csv</p>
             </div>
             
             <div class="flex flex-wrap justify-center gap-2">
                 <input type="file" id="csv_input" accept=".csv" class="hidden">
-                <button onclick="document.getElementById('csv_input').click()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:bg-blue-700 transition-all">📂 Cargar CSV</button>
-                <select id="sel_mes" class="bg-white text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none cursor-pointer"></select>
-                <select id="sel_ger" class="bg-white text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none cursor-pointer"></select>
+                <button onclick="document.getElementById('csv_input').click()" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-md hover:bg-blue-700 transition-all">📂 Seleccionar CSV</button>
+                <select id="sel_mes" class="bg-slate-50 text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none cursor-pointer hover:bg-white"></select>
+                <select id="sel_ger" class="bg-slate-50 text-slate-700 text-[10px] font-black px-4 py-2 rounded-xl border outline-none cursor-pointer hover:bg-white"></select>
             </div>
         </div>
 
@@ -34,23 +34,23 @@
         </div>
 
         <div class="mb-6">
-            <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="bg-white rounded-2xl border shadow-sm overflow-hidden border-red-100">
                 <div class="bg-red-600 p-3 flex justify-between items-center">
-                    <h2 class="text-white font-black text-xs uppercase tracking-widest">⚠️ ALERTAS ACTIVOS (>2 DÍAS OFF)</h2>
-                    <span id="count_alerts" class="bg-white text-red-600 text-[10px] px-2 py-1 rounded-lg font-black">0</span>
+                    <h2 class="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                        <span class="animate-pulse">⚠️</span> ALERTAS CRÍTICAS (ORDENADAS POR DÍAS OFF)
+                    </h2>
+                    <span id="count_alerts" class="bg-white text-red-600 text-[10px] px-3 py-1 rounded-full font-black">0</span>
                 </div>
-                <div class="max-h-60 overflow-y-auto">
+                <div class="max-h-64 overflow-y-auto">
                     <table class="w-full text-left text-[11px]">
-                        <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b">
+                        <thead class="bg-red-50 text-red-700 font-bold uppercase border-b border-red-100">
                             <tr>
                                 <th class="p-3">Ejecutivo</th>
                                 <th class="p-3">Gerencia</th>
-                                <th class="p-3 text-center">Inactividad</th>
+                                <th class="p-3 text-center">Días sin Conexión</th>
                             </tr>
                         </thead>
-                        <tbody id="table_alerts" class="divide-y divide-slate-100 italic text-slate-400">
-                            <tr><td colspan="3" class="p-6 text-center">Sin datos cargados...</td></tr>
-                        </tbody>
+                        <tbody id="table_alerts" class="divide-y divide-red-50 italic"></tbody>
                     </table>
                 </div>
             </div>
@@ -58,16 +58,19 @@
 
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
             <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
-                <input type="text" id="search_box" placeholder="BUSCAR EJECUTIVO..." class="w-full max-w-sm px-4 py-2 text-xs border rounded-lg outline-none font-bold uppercase">
-                <p id="total_acumulado" class="text-xs font-black text-blue-600 uppercase"></p>
+                <input type="text" id="search_box" placeholder="FILTRAR POR NOMBRE..." class="w-full max-w-sm px-4 py-2 text-xs border rounded-lg outline-none font-bold uppercase focus:ring-2 focus:ring-blue-500/20">
+                <div class="text-right">
+                    <p id="total_acumulado" class="text-[14px] font-black text-blue-600 leading-none"></p>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Total Activos en Filtro</p>
+                </div>
             </div>
-            <div class="overflow-x-auto max-h-[500px]">
+            <div class="overflow-x-auto max-h-[600px]">
                 <table class="w-full text-left text-[11px]">
                     <thead class="sticky-thead bg-slate-50 text-slate-500 font-bold uppercase">
                         <tr>
-                            <th class="p-4">Información del Agente</th>
-                            <th class="p-4 text-center">Calendario</th>
-                            <th class="p-4 text-right">Horas</th>
+                            <th class="p-4">Información del Ejecutivo</th>
+                            <th class="p-4 text-center">Detalle por Día</th>
+                            <th class="p-4 text-right">Hrs Totales</th>
                         </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100"></tbody>
@@ -107,7 +110,7 @@
             const iAg = cab.indexOf("AGENTE"), iHr = cab.indexOf("HORAS LOGUEO"),
                   iDi = cab.indexOf("DIA"), iMe = cab.indexOf("MES"),
                   iSi = cab.indexOf("SISTEMA"), iGe = cab.indexOf("GERENCIA"),
-                  iEs = cab.indexOf("ESTATUS"); // Detectamos columna Estatus
+                  iEs = cab.indexOf("ESTATUS");
 
             dataGlobal = {};
             let setF = new Set(), setG = new Set();
@@ -117,11 +120,9 @@
                 const col = lineas[i].split(sep).map(c => c.trim());
                 if (col.length < 5) continue;
 
-                // FILTRO: Solo Activos y solo Sprinklr
-                const estatus = col[iEs]?.toUpperCase() || "";
-                const sistema = col[iSi]?.toUpperCase() || "";
-                
-                if (estatus !== "ACTIVO" || !sistema.includes("SPRINKLR")) continue; 
+                const est = col[iEs]?.toUpperCase() || "";
+                const sis = col[iSi]?.toUpperCase() || "";
+                if (est !== "ACTIVO" || !sis.includes("SPRINKLR")) continue; 
 
                 const ag = col[iAg], fec = col[iDi], mesN = col[iMe]?.toUpperCase(),
                       seg = t2s(col[iHr]), ger = col[iGe] || "S/G", mesId = fec.split('/')[1];
@@ -130,7 +131,7 @@
                 setF.add(fec); setG.add(ger);
                 if (mesId) mesesDisp[mesId] = mesN;
 
-                if (!dataGlobal[ag]) dataGlobal[ag] = { ag, ger, logs: {} };
+                if (!dataGlobal[ag]) dataGlobal[ag] = { ag, ger, totalSeg: 0, logs: {}, offDays: 0 };
                 if (!dataGlobal[ag].logs[fec]) dataGlobal[ag].logs[fec] = 0;
                 dataGlobal[ag].logs[fec] += seg;
             }
@@ -138,14 +139,14 @@
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
             
             const sMes = document.getElementById('sel_mes');
-            sMes.innerHTML = '<option value="ALL">PERIODO COMPLETO</option>';
+            sMes.innerHTML = '<option value="ALL">VISTA ACUMULADA</option>';
             Object.keys(mesesDisp).sort().forEach(id => sMes.innerHTML += `<option value="${id}">${mesesDisp[id]}</option>`);
 
             const sGer = document.getElementById('sel_ger');
-            sGer.innerHTML = '<option value="ALL">TODOS LOS GERENTES</option>';
+            sGer.innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>';
             [...setG].sort().forEach(g => sGer.innerHTML += `<option value="${g}">${g}</option>`);
 
-            document.getElementById('file_status').innerText = "✅ FILTRADO POR 'ACTIVO'";
+            document.getElementById('file_status').innerText = "✅ AUDITORÍA DE ACTIVOS LISTA";
             render();
         }
 
@@ -155,50 +156,57 @@
                   q = document.getElementById('search_box').value.toUpperCase();
 
             const fFilt = mSel === "ALL" ? fechasGlobal : fechasGlobal.filter(f => f.split('/')[1] === mSel);
-            let htmlMain = "", htmlAlerts = "", tTotal = 0, alertCount = 0;
+            
+            let listAgentes = [];
             let timeLine = fFilt.map(() => 0);
 
             Object.values(dataGlobal).forEach(u => {
                 if ((gSel !== "ALL" && u.ger !== gSel) || (q && !u.ag.toUpperCase().includes(q))) return;
 
-                let uSum = 0, uOffDays = 0, boxes = "";
-                
+                let uSum = 0, uOff = 0, boxes = "";
                 fFilt.forEach((f, idx) => {
-                    const segs = u.logs[f] || 0;
-                    uSum += segs;
-                    timeLine[idx] += segs;
-
-                    if (segs === 0) uOffDays++;
-                    const css = segs > 0 ? 'spr-high' : 'day-off';
-                    boxes += `<div class="day-box ${css}" title="${f}">${f.split('/')[0]}</div>`;
+                    const s = u.logs[f] || 0;
+                    uSum += s;
+                    timeLine[idx] += s;
+                    if (s === 0) uOff++;
+                    const css = s > 0 ? 'spr-high' : 'day-off';
+                    boxes += `<div class="day-box ${css}" title="${f}: ${s2t(s)}">${f.split('/')[0]}</div>`;
                 });
 
-                tTotal += uSum;
-
-                // Alertas de personal ACTIVO con más de 2 días de inactividad
-                if (uOffDays > 2) {
-                    alertCount++;
-                    htmlAlerts += `
-                        <tr>
-                            <td class="p-3 font-black text-slate-800">${u.ag}</td>
-                            <td class="p-3 text-slate-500 uppercase font-bold">${u.ger}</td>
-                            <td class="p-3 text-center text-red-600 font-black">${uOffDays} DÍAS OFF</td>
-                        </tr>`;
+                if (uSum > 0 || uOff > 0) {
+                    listAgentes.push({ ...u, currentSum: uSum, currentOff: uOff, boxes });
                 }
-
-                htmlMain += `<tr>
-                    <td class="p-4"><p class="font-black text-slate-800 text-[12px] uppercase">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold uppercase">${u.ger}</p></td>
-                    <td class="p-4 flex flex-wrap gap-1 justify-center">${boxes}</td>
-                    <td class="p-4 text-right font-black text-blue-600 text-[13px]">${s2t(uSum)}</td>
-                </tr>`;
             });
 
-            document.getElementById('table_alerts').innerHTML = alertCount > 0 ? htmlAlerts : '<tr><td colspan="3" class="p-6 text-center text-emerald-500 font-bold">✅ TODO EL PERSONAL ACTIVO TIENE CONEXIÓN</td></tr>';
-            document.getElementById('count_alerts').innerText = alertCount;
-            document.getElementById('table_body').innerHTML = htmlMain;
-            document.getElementById('total_acumulado').innerText = `TOTAL ACTIVO: ${s2t(tTotal)}`;
+            // --- ORDENACIÓN ---
+            // Tabla General: Mayor a menor tiempo
+            const sortedGeneral = [...listAgentes].sort((a, b) => b.currentSum - a.currentSum);
+            // Alertas: Mayor a menor días Off (mínimo 3 días para alertar)
+            const sortedAlerts = [...listAgentes].filter(a => a.currentOff > 2 && a.currentSum > 0).sort((a, b) => b.currentOff - a.currentOff);
+
+            // Render Alertas
+            document.getElementById('count_alerts').innerText = `${sortedAlerts.length} CASOS ENCONTRADOS`;
+            document.getElementById('table_alerts').innerHTML = sortedAlerts.length ? sortedAlerts.map(u => `
+                <tr class="hover:bg-red-50 border-b border-red-50">
+                    <td class="p-3 font-black text-slate-800 uppercase">${u.ag}</td>
+                    <td class="p-3 text-slate-500 font-bold">${u.ger}</td>
+                    <td class="p-3 text-center text-red-600 font-black text-sm">${u.currentOff} DÍAS</td>
+                </tr>`).join('') : '<tr><td colspan="3" class="p-8 text-center text-emerald-500 font-bold uppercase">✅ Sin anomalías de conexión</td></tr>';
+
+            // Render Tabla
+            let tTotal = 0;
+            document.getElementById('table_body').innerHTML = sortedGeneral.map(u => {
+                tTotal += u.currentSum;
+                return `<tr>
+                    <td class="p-4"><p class="font-black text-slate-800 text-[12px] uppercase">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold">${u.ger}</p></td>
+                    <td class="p-4 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
+                    <td class="p-4 text-right font-black text-blue-600 text-[13px]">${s2t(u.currentSum)}</td>
+                </tr>`;
+            }).join('');
+
+            document.getElementById('total_acumulado').innerText = s2t(tTotal);
             
-            // GRÁFICA CON ETIQUETAS MEJORADAS
+            // GRÁFICA CON ETIQUETAS FORZADAS
             const valuesY = timeLine.map(v => (v/3600).toFixed(1));
             Plotly.newPlot('chart_div', [{ 
                 x: fFilt.map(f => f.substring(0,5)), 
@@ -208,13 +216,13 @@
                 text: valuesY.map(v => v > 0 ? v : ""), 
                 textfont: { family: 'Arial Black', size: 10, color: '#1e40af' },
                 textposition: 'top center',
-                line: { color: '#2563eb', width: 3, shape: 'spline' },
-                marker: { size: 6 }
+                line: { color: '#2563eb', width: 4, shape: 'spline' },
+                marker: { size: 8, color: '#1e40af' }
             }], { 
-                title: { text: 'CONEXIÓN DIARIA (ACTIVOS)', font: { family: 'Arial Black', size: 14 } },
-                margin: { t: 50, b: 40, l: 40, r: 20 },
+                title: { text: 'VOLUMEN DE CONEXIÓN DIARIA (HORAS)', font: { family: 'Arial Black', size: 14 } },
+                margin: { t: 60, b: 40, l: 40, r: 20 },
                 xaxis: { showgrid: false },
-                yaxis: { title: 'Horas' }
+                yaxis: { title: 'Horas Totales', gridcolor: '#f1f5f9' }
             }, { responsive: true, displayModeBar: false });
         }
 
