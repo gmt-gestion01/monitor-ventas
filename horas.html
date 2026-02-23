@@ -2,277 +2,197 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT CONTROL | Panel de Horas</title>
+    <title>GMT CONTROL | Auditoría HC</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); transition: transform 0.2s; }
-        .day-box:hover { transform: scale(1.2); z-index: 10; cursor: help; }
+        .day-box { width: 20px; height: 20px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); }
         .spr-high { background-color: #2563eb; color: white; }
         .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; }
         .sticky-thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; border-bottom: 2px solid #e2e8f0; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 p-4">
+<body class="bg-slate-50 p-4 md:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
+        <div class="bg-white p-6 rounded-xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-black text-slate-900 tracking-tighter">GMT <span class="text-blue-600">AUDIT</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="display_periodo">CARGANDO ARCHIVO...</p>
+                <h1 class="text-xl font-black uppercase tracking-tighter">GMT <span class="text-blue-600">AUDIT</span> | <span id="txt_mes_actual">PANEL GENERAL</span></h1>
+                <p id="status_file" class="text-[10px] font-bold text-red-500 uppercase italic">Esperando archivo...</p>
             </div>
-            
             <div class="flex flex-wrap gap-2">
-                <select id="sel_mes" class="bg-blue-50 text-blue-700 text-xs font-bold px-4 py-2 rounded-xl border border-blue-100 outline-none"></select>
-                <select id="sel_area" class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-100 outline-none"></select>
-                <button onclick="exportarExcel()" class="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-black hover:bg-slate-800 transition-all">EXCEL</button>
+                <select id="f_mes" class="bg-blue-50 text-blue-700 text-[10px] font-black px-4 py-2 rounded-lg border border-blue-100 outline-none"></select>
+                <select id="f_area" class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-4 py-2 rounded-lg border border-emerald-100 outline-none"></select>
+                <button onclick="generarExcel()" class="bg-slate-900 text-white px-5 py-2 rounded-lg text-[10px] font-black shadow-md uppercase">Excel</button>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Sprinklr Total</p>
-                <p id="kpi_spr" class="text-2xl font-black text-blue-600">00:00</p>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Vicidial Total</p>
-                <p id="kpi_vic" class="text-2xl font-black text-orange-500">00:00</p>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Días Promedio</p>
-                <p id="kpi_prom" class="text-2xl font-black text-slate-800">0.0h</p>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-red-500">
-                <p class="text-[10px] font-bold text-red-400 uppercase mb-1">Alertas (>2d Off)</p>
-                <p id="kpi_alert" class="text-2xl font-black text-red-600">0</p>
-            </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-center">
+            <div class="bg-white p-4 rounded-xl border"><p class="text-[9px] font-bold text-slate-400 uppercase">Sprinklr</p><p id="k_spr" class="text-lg font-black text-blue-600">0:00</p></div>
+            <div class="bg-white p-4 rounded-xl border"><p class="text-[9px] font-bold text-slate-400 uppercase">Vicidial</p><p id="k_vic" class="text-lg font-black text-orange-500">0:00</p></div>
+            <div class="bg-white p-4 rounded-xl border"><p class="text-[9px] font-bold text-slate-400 uppercase">Días Periodo</p><p id="k_dias" class="text-lg font-black">0</p></div>
+            <div class="bg-white p-4 rounded-xl border"><p class="text-[9px] font-bold text-slate-400 uppercase italic text-red-500">Alertas</p><p id="k_alert" class="text-lg font-black text-red-600">0</p></div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
-            <div id="chart_line" style="height: 300px;"></div>
-        </div>
+        <div class="bg-white p-4 rounded-xl border shadow-sm mb-6"><div id="g_linea" style="height: 300px;"></div></div>
 
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <input type="text" id="busqueda" placeholder="Buscar por agente o gerencia..." class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs w-full max-w-md outline-none focus:ring-2 focus:ring-blue-500/20">
-                <div class="ml-4 flex gap-4 text-[10px] font-bold uppercase">
-                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-blue-600"></div> Spr</span>
-                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-orange-500"></div> Vic</span>
-                </div>
-            </div>
-            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead class="sticky-thead text-[10px] uppercase font-black text-slate-500 bg-slate-50">
-                        <tr>
-                            <th class="p-4">Información del Agente</th>
-                            <th class="p-4">Actividad Diaria (Mapa de Calor)</th>
-                            <th class="p-4 text-right">Total Horas</th>
-                        </tr>
+        <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+            <div class="p-4 bg-slate-50 border-b"><input type="text" id="busqueda" placeholder="BUSCAR AGENTE..." class="w-full max-w-sm px-4 py-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 uppercase font-bold"></div>
+            <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table class="w-full text-left text-[10px]">
+                    <thead class="sticky-thead uppercase font-bold text-slate-500 bg-slate-50">
+                        <tr><th class="p-4">Agente / Datos</th><th class="p-4 text-center">Mapa de Conexión</th><th class="p-4 text-right">Total</th></tr>
                     </thead>
-                    <tbody id="tabla_cuerpo" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="t_body" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        let rawData = [];
-        let dataAgrupada = {};
-        let listaFechas = [];
-        let mesesDisponibles = {};
+        let dataGlobal = {};
+        let fechasGlobal = [];
+        let mesesRef = {};
 
-        // 1. CARGA DE DATOS
-        window.onload = async () => {
+        window.onload = () => cargarCSV();
+
+        async function cargarCSV() {
+            const fileName = 'HORAS_ACUMULADO_HC_1.csv';
             try {
-                const response = await fetch('HORAS_ACUMULADO_HC_1.csv');
-                const text = await response.text();
-                procesarData(text);
+                const res = await fetch(fileName);
+                if (!res.ok) throw new Error("No encontrado");
+                const text = await res.text();
+                procesar(text);
+                document.getElementById('status_file').innerText = "ARCHIVO CARGADO OK";
+                document.getElementById('status_file').className = "text-[10px] font-bold text-emerald-500 uppercase";
             } catch (e) {
-                document.getElementById('display_periodo').innerText = "ERROR AL CARGAR ARCHIVO";
+                document.getElementById('status_file').innerText = "ERROR: ARCHIVO '" + fileName + "' NO ENCONTRADO O BLOQUEADO";
             }
-        };
-
-        function hmsToSecs(hms) {
-            if (!hms) return 0;
-            const p = hms.split(':');
-            return (+p[0]) * 3600 + (+p[1]) * 60 + (+p[2] || 0);
         }
 
-        function secsToHms(secs) {
-            const h = Math.floor(secs / 3600);
-            const m = Math.floor((secs % 3600) / 60);
-            return `${h}:${m.toString().padStart(2, '0')}`;
+        function t2s(t) { 
+            if (!t || t.includes("N/A")) return 0;
+            const p = t.toString().trim().split(':');
+            return p.length < 2 ? 0 : (parseInt(p[0]) || 0) * 3600 + (parseInt(p[1]) || 0) * 60 + (parseInt(p[2]) || 0);
         }
 
-        // 2. PROCESAMIENTO
-        function procesarData(csv) {
-            const filas = csv.split('\n').filter(f => f.trim().length > 0);
-            const headers = filas[0].split(',').map(h => h.trim().toUpperCase());
+        function s2t(s) { 
+            const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+            return `${h}:${m.toString().padStart(2,'0')}`; 
+        }
+
+        function procesar(csv) {
+            const lineas = csv.split(/\r?\n/).filter(l => l.trim().length > 10);
+            // Autodetectar separador (coma o punto y coma)
+            const sep = lineas[0].includes(';') ? ';' : ',';
+            const cabecera = lineas[0].split(sep).map(h => h.trim().toUpperCase());
             
-            // Localizar índices dinámicamente
-            const idx = {
-                agente: headers.indexOf("AGENTE"),
-                horas: headers.indexOf("HORAS LOGUEO"),
-                dia: headers.indexOf("DIA"),
-                mes: headers.indexOf("MES"),
-                sistema: headers.indexOf("SISTEMA"),
-                gerencia: headers.indexOf("GERENCIA"),
-                area: headers.indexOf("AREA")
-            };
+            const iAgente = cabecera.indexOf("AGENTE"), iHrs = cabecera.indexOf("HORAS LOGUEO"),
+                  iDia = cabecera.indexOf("DIA"), iMes = cabecera.indexOf("MES"),
+                  iSis = cabecera.indexOf("SISTEMA"), iArea = cabecera.indexOf("AREA");
 
-            const setFechas = new Set();
-            const setAreas = new Set();
-            dataAgrupada = {};
+            dataGlobal = {};
+            let setFechas = new Set(), setAreas = new Set();
+            mesesRef = {};
 
-            for (let i = 1; i < filas.length; i++) {
-                const col = filas[i].split(',');
+            for (let i = 1; i < lineas.length; i++) {
+                const col = lineas[i].split(sep).map(c => c.trim());
                 if (col.length < 5) continue;
 
-                const nombre = col[idx.agente];
-                const fecha = col[idx.dia];
-                const mesNombre = col[idx.mes]?.toUpperCase();
-                const mesId = fecha.split('/')[1];
-                const sistema = col[idx.sistema]?.toUpperCase();
-                const segundos = hmsToSecs(col[idx.horas]);
+                const ag = col[iAgente], fec = col[iDia], mesN = col[iMes]?.toUpperCase(),
+                      sis = col[iSis]?.toUpperCase() || "", seg = t2s(col[iHrs]),
+                      area = col[iArea] || "SIN AREA", mesId = fec.split('/')[1];
 
-                setFechas.add(fecha);
-                setAreas.add(col[idx.area]);
-                mesesDisponibles[mesId] = mesNombre;
+                if (!ag || !fec) continue;
 
-                if (!dataAgrupada[nombre]) {
-                    dataAgrupada[nombre] = { 
-                        nombre, 
-                        gerencia: col[idx.gerencia], 
-                        area: col[idx.area],
-                        registros: {} 
-                    };
-                }
+                setFechas.add(fec);
+                setAreas.add(area);
+                if (mesId) mesesRef[mesId] = mesN;
 
-                if (!dataAgrupada[nombre].registros[fecha]) {
-                    dataAgrupada[nombre].registros[fecha] = { SPR: 0, VIC: 0 };
-                }
+                if (!dataGlobal[ag]) dataGlobal[ag] = { ag, area, logs: {} };
+                if (!dataGlobal[ag].logs[fec]) dataGlobal[ag].logs[fec] = { SPR: 0, VIC: 0 };
 
-                if (sistema.includes("SPRINKLR")) dataAgrupada[nombre].registros[fecha].SPR += segundos;
-                else dataAgrupada[nombre].registros[fecha].VIC += segundos;
+                if (sis.includes("SPRINKLR")) dataGlobal[ag].logs[fec].SPR += seg;
+                else dataGlobal[ag].logs[fec].VIC += seg;
             }
 
-            listaFechas = Array.from(setFechas).sort((a, b) => {
-                return a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join(''));
-            });
+            fechasGlobal = [...setFechas].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
+            
+            // UI Selectores
+            const sMes = document.getElementById('f_mes');
+            sMes.innerHTML = '<option value="ALL">PERIODO COMPLETO</option>';
+            Object.keys(mesesRef).sort().forEach(id => sMes.innerHTML += `<option value="${id}">${mesesRef[id]}</option>`);
 
-            // Llenar Selectores
-            const selMes = document.getElementById('sel_mes');
-            selMes.innerHTML = '<option value="ALL">TODO EL PERIODO</option>';
-            Object.keys(mesesDisponibles).sort().forEach(id => {
-                selMes.innerHTML += `<option value="${id}">${mesesDisponibles[id]}</option>`;
-            });
+            const sArea = document.getElementById('f_area');
+            sArea.innerHTML = '<option value="ALL">TODAS LAS AREAS</option>';
+            [...setAreas].sort().forEach(a => sArea.innerHTML += `<option value="${a}">${a}</option>`);
 
-            const selArea = document.getElementById('sel_area');
-            selArea.innerHTML = '<option value="ALL">TODAS LAS ÁREAS</option>';
-            Array.from(setAreas).sort().forEach(a => {
-                selArea.innerHTML += `<option value="${a}">${a}</option>`;
-            });
-
-            document.getElementById('display_periodo').innerText = `DATA ACTIVA: ${listaFechas[0]} - ${listaFechas[listaFechas.length-1]}`;
-            actualizarDashboard();
+            render();
         }
 
-        // 3. RENDERIZADO
-        function actualizarDashboard() {
-            const mesFiltro = document.getElementById('sel_mes').value;
-            const areaFiltro = document.getElementById('sel_area').value;
-            const busqueda = document.getElementById('busqueda').value.toUpperCase();
+        function render() {
+            const mSel = document.getElementById('f_mes').value,
+                  aSel = document.getElementById('f_area').value,
+                  q = document.getElementById('busqueda').value.toUpperCase();
 
-            const fechasFiltradas = mesFiltro === "ALL" ? listaFechas : listaFechas.filter(f => f.split('/')[1] === mesFiltro);
-            
-            let html = "";
-            let tSpr = 0, tVic = 0, alertas = 0;
-            let timelineSpr = fechasFiltradas.map(() => 0);
-            let timelineVic = fechasFiltradas.map(() => 0);
+            document.getElementById('txt_mes_actual').innerText = mSel === "ALL" ? "PANEL GENERAL" : mesesRef[mSel];
 
-            Object.values(dataAgrupada).forEach(agente => {
-                if (areaFiltro !== "ALL" && agente.area !== areaFiltro) return;
-                if (busqueda && !agente.nombre.toUpperCase().includes(busqueda) && !agente.gerencia.toUpperCase().includes(busqueda)) return;
+            const fechasFiltradas = mSel === "ALL" ? fechasGlobal : fechasGlobal.filter(f => f.split('/')[1] === mSel);
+            let html = "", tS = 0, tV = 0, alerts = 0;
+            let timelineS = fechasFiltradas.map(() => 0), timelineV = fechasFiltradas.map(() => 0);
 
-                let hAgente = 0;
-                let diasOff = 0;
-                let calendarHtml = "";
+            Object.values(dataGlobal).forEach(u => {
+                if ((aSel !== "ALL" && u.area !== aSel) || (q && !u.ag.toUpperCase().includes(q))) return;
 
-                fechasFiltradas.forEach((f, i) => {
-                    const reg = agente.registros[f] || { SPR: 0, VIC: 0 };
-                    const totalDia = reg.SPR + reg.VIC;
-                    
-                    if (totalDia === 0) diasOff++;
-                    hAgente += totalDia;
-                    tSpr += reg.SPR;
-                    tVic += reg.VIC;
-                    
-                    timelineSpr[i] += reg.SPR;
-                    timelineVic[i] += reg.VIC;
+                let uSum = 0, uOff = 0, boxes = "";
+                fechasFiltradas.forEach((f, idx) => {
+                    const reg = u.logs[f] || { SPR: 0, VIC: 0 };
+                    const tot = reg.SPR + reg.VIC;
+                    uSum += tot; tS += reg.SPR; tV += reg.VIC;
+                    timelineS[idx] += reg.SPR; timelineV[idx] += reg.VIC;
 
-                    const clase = reg.SPR > reg.VIC ? 'spr-high' : (reg.VIC > 0 ? 'vic-high' : 'day-off');
-                    const tooltip = `${f} | Spr: ${secsToHms(reg.SPR)} | Vic: ${secsToHms(reg.VIC)}`;
-                    calendarHtml += `<div class="day-box ${clase}" title="${tooltip}">${f.split('/')[0]}</div>`;
+                    if (tot === 0) uOff++;
+                    const css = reg.SPR > reg.VIC ? 'spr-high' : (reg.VIC > 0 ? 'vic-high' : 'day-off');
+                    boxes += `<div class="day-box ${css}" title="${f}: ${s2t(tot)}">${f.split('/')[0]}</div>`;
                 });
 
-                if (diasOff > 2 && hAgente > 0) alertas++;
+                if (uOff > 2 && uSum > 0) alerts++;
 
-                html += `
-                    <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="p-4">
-                            <p class="font-black text-slate-900 text-xs uppercase">${agente.nombre}</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase">${agente.gerencia} • <span class="text-blue-500">${agente.area}</span></p>
-                        </td>
-                        <td class="p-4"><div class="flex flex-wrap gap-1">${calendarHtml}</div></td>
-                        <td class="p-4 text-right font-black text-slate-700 text-sm">${secsToHms(hAgente)}</td>
-                    </tr>
-                `;
+                html += `<tr>
+                    <td class="p-4 font-bold text-slate-800">${u.ag}<br><span class="text-[8px] text-slate-400 font-normal uppercase">${u.area}</span></td>
+                    <td class="p-4 flex flex-wrap gap-1 justify-center">${boxes}</td>
+                    <td class="p-4 text-right font-black text-slate-600">${s2t(uSum)}</td>
+                </tr>`;
             });
 
-            document.getElementById('tabla_cuerpo').innerHTML = html;
-            document.getElementById('kpi_spr').innerText = secsToHms(tSpr);
-            document.getElementById('kpi_vic').innerText = secsToHms(tVic);
-            document.getElementById('kpi_alert').innerText = alertas;
-            document.getElementById('kpi_prom').innerText = fechasFiltradas.length > 0 ? (((tSpr + tVic)/3600) / fechasFiltradas.length).toFixed(1) + "h" : "0h";
+            document.getElementById('t_body').innerHTML = html;
+            document.getElementById('k_spr').innerText = s2t(tS);
+            document.getElementById('k_vic').innerText = s2t(tV);
+            document.getElementById('k_dias').innerText = fechasFiltradas.length;
+            document.getElementById('k_alert').innerText = alerts;
 
-            renderGrafico(fechasFiltradas.map(f => f.substring(0,5)), timelineSpr.map(s => (s/3600).toFixed(1)), timelineVic.map(v => (v/3600).toFixed(1)));
+            renderGraph(fechasFiltradas.map(f => f.substring(0,5)), timelineS.map(v => (v/3600).toFixed(1)), timelineV.map(v => (v/3600).toFixed(1)));
         }
 
-        function renderGrafico(labels, dSpr, dVic) {
-            const data = [
-                { x: labels, y: dSpr, name: 'Sprinklr', type: 'scatter', mode: 'lines+markers', line: {color: '#2563eb', width: 3}, fill: 'tozeroy' },
-                { x: labels, y: dVic, name: 'Vicidial', type: 'scatter', mode: 'lines+markers', line: {color: '#f97316', width: 3} }
-            ];
-            const layout = {
-                showlegend: false,
-                margin: { t: 20, b: 40, l: 40, r: 20 },
-                xaxis: { showgrid: false, tickfont: {size: 10} },
-                yaxis: { title: 'Horas Totales', tickfont: {size: 10} },
-                hovermode: 'x unified'
-            };
-            Plotly.newPlot('chart_line', data, layout, {responsive: true, displayModeBar: false});
+        function renderGraph(l, s, v) {
+            Plotly.newPlot('g_linea', [
+                { x: l, y: s, name: 'Spr', type: 'scatter', mode: 'lines+markers', line: {color: '#2563eb'} },
+                { x: l, y: v, name: 'Vic', type: 'scatter', mode: 'lines+markers', line: {color: '#f97316'} }
+            ], { margin: {t:20, b:40, l:40, r:20}, showlegend: false, hovermode: 'x unified' }, {responsive: true});
         }
 
-        // EVENTOS
-        document.getElementById('sel_mes').onchange = actualizarDashboard;
-        document.getElementById('sel_area').onchange = actualizarDashboard;
-        document.getElementById('busqueda').oninput = actualizarDashboard;
+        document.getElementById('f_mes').onchange = render;
+        document.getElementById('f_area').onchange = render;
+        document.getElementById('busqueda').oninput = render;
 
-        function exportarExcel() {
-            const rows = Object.values(dataAgrupada).map(a => {
-                let total = 0;
-                Object.values(a.registros).forEach(r => total += (r.SPR + r.VIC));
-                return { AGENTE: a.nombre, GERENCIA: a.gerencia, AREA: a.area, HORAS_TOTALES: secsToHms(total) };
-            });
-            const ws = XLSX.utils.json_to_sheet(rows);
+        function generarExcel() {
+            const data = Object.values(dataGlobal).map(u => ({ "AGENTE": u.ag, "AREA": u.area }));
+            const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
-            XLSX.writeFile(wb, "GMT_REPORTE_HC.xlsx");
+            XLSX.writeFile(wb, "GMT_REPORTE.xlsx");
         }
     </script>
 </body>
