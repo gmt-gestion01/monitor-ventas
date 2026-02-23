@@ -6,160 +6,123 @@
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <style>
-        /* ESTILOS DE COMPONENTES ESPECÍFICOS */
-        .day-box { width: 20px; height: 20px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
-        .spr-high { background-color: #2563eb; color: white; } /* Azul Sprinklr */
-        .vic-high { background-color: #f97316; color: white; } /* Naranja Vicidial */
+        .day-box { width: 18px; height: 18px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
+        .spr-high { background-color: #2563eb; color: white; }
+        .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
         #login_layer { position: fixed; inset: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 9999; }
-        .table-scroll { max-height: 60vh; overflow-y: auto; }
+        .debug-panel { background: #fee2e2; border: 2px solid #ef4444; padding: 10px; margin-bottom: 15px; border-radius: 10px; font-family: monospace; font-size: 10px; color: #b91c1c; }
     </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800">
+<body class="bg-slate-50 p-4">
 
     <div id="login_layer">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border-t-8 border-blue-600">
-            <h2 class="text-3xl font-black mb-6 uppercase tracking-tighter">GMT <span class="text-blue-600">SISTEMA</span></h2>
+            <h2 class="text-2xl font-black mb-6 uppercase">GMT ACCESS</h2>
             <form id="form_acceso" class="space-y-4">
-                <input type="text" id="user_name" placeholder="USUARIO" required class="w-full p-4 bg-slate-50 border-2 rounded-2xl text-center font-bold outline-none focus:border-blue-600">
-                <input type="password" id="pass" placeholder="CONTRASEÑA" required class="w-full p-4 bg-slate-50 border-2 rounded-2xl text-center font-bold outline-none focus:border-blue-600">
-                <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black shadow-lg uppercase hover:bg-blue-700 transition-all">Entrar al Panel</button>
+                <input type="text" id="user_name" placeholder="USUARIO" required class="w-full p-4 bg-slate-50 border-2 rounded-xl text-center font-bold outline-none focus:border-blue-600">
+                <input type="password" id="pass" placeholder="CONTRASEÑA" required class="w-full p-4 bg-slate-50 border-2 rounded-xl text-center font-bold outline-none focus:border-blue-600">
+                <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-xl font-black uppercase shadow-lg hover:bg-blue-700 transition-all">Entrar</button>
             </form>
         </div>
     </div>
 
-    <div id="dashboard_wrapper" class="hidden p-4 md:p-8 max-w-7xl mx-auto">
+    <div id="dashboard_wrapper" class="hidden max-w-7xl mx-auto">
         
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-black uppercase text-slate-900 tracking-tighter">GMT <span class="text-blue-600">AUDITORÍA BI</span></h1>
-                <p id="data_status" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Iniciando...</p>
-            </div>
-            <div class="flex flex-wrap justify-center gap-2">
-                <select id="filter_month" onchange="actualizarSemanas()" class="bg-white border-2 border-slate-100 text-[10px] font-black px-4 py-2 rounded-xl outline-none focus:border-blue-500"></select>
-                <select id="filter_week" onchange="renderDashboard()" class="bg-white border-2 border-slate-100 text-[10px] font-black px-4 py-2 rounded-xl outline-none focus:border-blue-500"></select>
-                <select id="filter_camp" onchange="renderDashboard()" class="bg-white border-2 border-slate-100 text-[10px] font-black px-4 py-2 rounded-xl outline-none focus:border-blue-500"></select>
-                <button onclick="generarExcel()" class="bg-emerald-600 text-white px-6 py-2 rounded-xl text-[10px] font-black shadow-md uppercase hover:bg-emerald-700 transition-all">Excel</button>
-            </div>
+        <div id="debug_info" class="debug-panel hidden">
+            <strong>SISTEMA DE DIAGNÓSTICO:</strong>
+            <ul id="debug_list" class="list-disc ml-5 mt-1"></ul>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-5 rounded-2xl border shadow-sm">
-                <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Sprinklr</p>
-                <p id="k_spr" class="text-2xl font-black text-blue-600">0:00:00</p>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-xl font-black text-slate-900 uppercase">GMT AUDITORÍA <span class="text-blue-600">BI</span></h1>
+                <p id="data_status" class="text-[10px] font-bold text-slate-400 uppercase italic">Verificando datos...</p>
             </div>
-            <div class="bg-white p-5 rounded-2xl border shadow-sm">
-                <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Vicidial</p>
-                <p id="k_vic" class="text-2xl font-black text-orange-500">0:00:00</p>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border shadow-sm">
-                <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Acumulado</p>
-                <p id="acum_sem" class="text-2xl font-black text-slate-800">0h</p>
-            </div>
-            <div class="bg-red-600 p-5 rounded-2xl shadow-lg shadow-red-100">
-                <p class="text-[9px] font-black text-white/80 uppercase mb-1">Alertas Críticas</p>
-                <p id="k_inact" class="text-2xl font-black text-white">0</p>
+            <div class="flex flex-wrap gap-2">
+                <select id="filter_month" onchange="actualizarSemanas()" class="bg-white border-2 border-slate-100 text-[10px] font-black px-3 py-2 rounded-lg"></select>
+                <select id="filter_week" onchange="renderDashboard()" class="bg-white border-2 border-slate-100 text-[10px] font-black px-3 py-2 rounded-lg"></select>
+                <select id="filter_ger" onchange="renderDashboard()" class="bg-slate-900 text-white text-[10px] font-black px-3 py-2 rounded-lg"></select>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-2xl border shadow-sm h-[400px]">
-                <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4">Tendencia Diaria (Horas)</h3>
-                <div id="g_weekly" class="h-full w-full"></div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+                <div id="g_weekly" style="height: 300px;"></div>
             </div>
-            <div class="bg-white p-6 rounded-2xl border shadow-sm h-[400px]">
-                <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4">Mix de Conexión</h3>
-                <div id="g_pie" class="h-full w-full"></div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+                <div id="g_pie" style="height: 300px;"></div>
             </div>
         </div>
 
-        <div id="alerta_panel" class="hidden bg-white border border-red-200 rounded-2xl mb-8 overflow-hidden shadow-sm">
-            <div class="bg-red-600 p-4 flex justify-between items-center">
-                <span class="text-white text-xs font-black uppercase tracking-widest italic">⚠️ Ejecutivos con Inactividad (>= 2 días)</span>
-                <input type="text" id="search_user" oninput="renderDashboard()" placeholder="Buscar Ejecutivo..." class="bg-white/20 text-white placeholder-white/70 text-[10px] px-4 py-2 rounded-xl border border-white/30 outline-none w-48 uppercase font-bold">
-            </div>
-            <div class="table-scroll">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase">
-                        <tr><th class="p-4">Ejecutivo / Gerencia</th><th class="p-4 text-center">Activos</th><th class="p-4 text-center">Faltantes</th><th class="p-4">Total Horas</th></tr>
-                    </thead>
-                    <tbody id="t_body_alerts" class="divide-y divide-slate-100 text-[11px]"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 p-8 rounded-3xl mb-10 shadow-xl">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
-                <h2 class="text-white text-sm font-black uppercase tracking-widest italic">Mapa de Conexión por Gerencia</h2>
-                <select id="filter_ger" onchange="renderDashboard()" class="bg-white/10 text-white text-xs font-black p-4 rounded-2xl w-full max-w-md border border-white/20 outline-none cursor-pointer focus:bg-white focus:text-slate-900 transition-all"></select>
-            </div>
-            <div class="overflow-x-auto rounded-2xl border border-white/5 bg-white/5 p-4">
-                <table class="w-full text-[10px]"><tbody id="t_body_calendar" class="divide-y divide-white/5"></tbody></table>
-            </div>
+        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 border-b border-slate-100">
+                    <tr class="text-[10px] font-black text-slate-400 uppercase">
+                        <th class="p-4">Ejecutivo</th>
+                        <th class="p-4 text-center">Asistencia Visual</th>
+                    </tr>
+                </thead>
+                <tbody id="t_body_calendar" class="divide-y divide-slate-50 text-[11px]"></tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        /** * CONFIGURACIÓN DE ACCESO
-         * Aquí puedes agregar más usuarios y contraseñas.
-         */
-        const USERS_DB = { "ADMIN": "gmt2026", "JSOROZCO": "gmt2026_1" };
-        
+        const USERS_DB = { "ADMIN": "gmt2026" };
         let rawDataFRows = [], globalDates = [], groupedData = {}, monthsFound = {};
 
-        // Manejador del Login
+        // 1. GESTIÓN DE LOGIN
         document.getElementById('form_acceso').onsubmit = e => {
             e.preventDefault();
-            const u = document.getElementById('user_name').value.toUpperCase().trim();
-            const p = document.getElementById('pass').value;
-            if(USERS_DB[u] === p) {
+            if(USERS_DB[document.getElementById('user_name').value.toUpperCase()] === document.getElementById('pass').value) {
                 document.getElementById('login_layer').style.display = 'none';
                 document.getElementById('dashboard_wrapper').classList.remove('hidden');
                 cargarData();
-            } else { alert("Usuario o contraseña incorrectos."); }
+            } else { alert("Error"); }
         };
 
-        /**
-         * CARGA DE DATOS: Busca el archivo data.csv
-         */
+        // 2. CARGA Y AUTODIAGNÓSTICO
         function cargarData() {
-            fetch('data.csv') 
+            const debug = (msg) => {
+                document.getElementById('debug_info').classList.remove('hidden');
+                const li = document.createElement('li'); li.innerText = msg;
+                document.getElementById('debug_list').appendChild(li);
+            };
+
+            fetch('data.csv')
                 .then(res => res.text())
-                .then(csv => { 
-                    procesarCSV(csv); 
-                    document.getElementById('data_status').innerText = "CONEXIÓN ESTABLECIDA"; 
+                .then(csv => {
+                    const lines = csv.split(/\r?\n/).filter(l => l.trim() !== "");
+                    if(lines.length < 2) { debug("El archivo CSV está vacío o mal formado."); return; }
+                    
+                    const sep = lines[0].includes(';') ? ';' : ',';
+                    const headers = lines[0].split(sep);
+                    
+                    // VALIDACIÓN DE COLUMNAS
+                    if(headers.length < 10) {
+                        debug(`Tu CSV solo tiene ${headers.length} columnas. El sistema espera al menos 10 (A a J).`);
+                    }
+
+                    // EXTRACCIÓN DE FECHAS
+                    globalDates = headers.slice(9).map(d => d.trim().replace(/['"]+/g, ''));
+                    if(globalDates.length === 0 || !globalDates[0].includes('/')) {
+                        debug(`No se detectaron fechas en la columna J en adelante. Cabecera leída: ${headers[9]}`);
+                    }
+
+                    procesarCSV(lines, sep);
                 })
-                .catch(() => { 
-                    document.getElementById('data_status').innerText = "ERROR: ARCHIVO DATA.CSV NO HALLADO"; 
-                });
+                .catch(err => debug("No se pudo leer 'data.csv'. Verifica que el nombre sea exacto."));
         }
 
-        // Convertidores de Tiempo (Segundos <-> Formato HH:MM:SS)
-        function tToSec(t) { 
-            if(!t) return 0;
+        function tToSec(t) {
+            if(!t || t == "0") return 0;
             const p = t.toString().replace(/['"]+/g, '').trim().split(':');
-            return p.length < 2 ? 0 : (parseInt(p[0]) || 0) * 3600 + (parseInt(p[1]) || 0) * 60 + (parseInt(p[2]) || 0);
+            return p.length < 2 ? 0 : (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0));
         }
 
-        function secToT(s) { 
-            const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sc = s%60;
-            return `${h}:${m.toString().padStart(2,'0')}:${sc.toString().padStart(2,'0')}`; 
-        }
-
-        /**
-         * PROCESAMIENTO CSV: Limpia el archivo y organiza la estructura de datos
-         */
-        function procesarCSV(csvText) {
-            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== "");
-            const sep = lines[0].includes(';') ? ';' : ',';
-            const headers = lines[0].split(sep);
-            
-            // Extrae fechas a partir del índice 9 (Columna J)
-            globalDates = headers.slice(9).map(d => d.trim().replace(/['"]+/g, ''));
-            
-            // Agrupación automática por Meses
+        function procesarCSV(lines, sep) {
             monthsFound = {};
             globalDates.forEach((d, idx) => {
                 const parts = d.split('/');
@@ -169,152 +132,87 @@
                 monthsFound[mKey].indices.push(idx);
             });
 
-            // Llenado de Select de Meses
+            // Llenar Meses
             const ms = document.getElementById('filter_month');
-            ms.innerHTML = '<option value="ALL">PERIODO COMPLETO</option>';
-            Object.keys(monthsFound).sort().forEach(m => ms.innerHTML += `<option value="${m}">${monthsFound[m].name}</option>`);
+            ms.innerHTML = Object.keys(monthsFound).sort().map(m => `<option value="${m}">${monthsFound[m].name}</option>`).join('');
 
-            // Mapeo de filas del CSV a Objetos de JavaScript
-            rawDataFRows = []; groupedData = {}; let caps = new Set();
+            // Agrupar Datos
+            rawDataFRows = []; groupedData = {};
             lines.slice(1).forEach(line => {
-                const c = line.split(sep); if (c.length < 10) return;
-                const sis = c[0].replace(/['"]+/g, '').toUpperCase().trim(); 
-                const name = c[1].replace(/['"]+/g, '').trim(); 
-                const ger = (c[3] || '').replace(/['"]+/g, '').trim().toUpperCase() || "#N/D";
-                const camp = (c[4] || '').replace(/['"]+/g, '').trim().toUpperCase() || "#N/D";
+                const c = line.split(sep);
+                if (c.length < 10) return;
+                const sis = c[0].replace(/['"]+/g, '').toUpperCase().trim();
+                const name = c[1].replace(/['"]+/g, '').trim();
+                const ger = (c[3] || 'N/D').replace(/['"]+/g, '').trim().toUpperCase();
                 const daily = c.slice(9);
-                caps.add(camp);
-                rawDataFRows.push({ sis, name, ger, camp, daily });
-                // Estructura agrupada para Calendario y Alertas
-                if(!groupedData[name]) groupedData[name] = { name, ger, camp, systems: {} };
+                
+                rawDataFRows.push({ sis, name, ger, daily });
+                if(!groupedData[name]) groupedData[name] = { name, ger, systems: {} };
                 groupedData[name].systems[sis] = { daily };
             });
 
-            // Llenado de Selects (Campañas y Gerencias)
-            document.getElementById('filter_camp').innerHTML = '<option value="">CAMP (TODAS)</option>' + [...caps].sort().map(x => `<option value="${x}">${x}</option>`).join('');
             const gers = [...new Set(rawDataFRows.map(d => d.ger))].sort();
-            document.getElementById('filter_ger').innerHTML = '<option value="">-- SELECCIONAR GERENCIA --</option>' + gers.map(g => `<option value="${g}">${g}</option>`).join('');
+            document.getElementById('filter_ger').innerHTML = gers.map(g => `<option value="${g}">${g}</option>`).join('');
+            
             actualizarSemanas();
         }
 
-        /**
-         * LÓGICA DE SEMANAS: Divide el mes seleccionado en bloques de 7 días
-         */
         function actualizarSemanas() {
             const mKey = document.getElementById('filter_month').value;
             const ws = document.getElementById('filter_week');
-            let baseDates = mKey === "ALL" ? globalDates : (monthsFound[mKey]?.indices || []);
-            ws.innerHTML = '<option value="ALL">MES COMPLETO</option>';
+            let baseDates = monthsFound[mKey].indices;
+            ws.innerHTML = '<option value="ALL">TODO EL MES</option>';
             for(let i=0; i < Math.ceil(baseDates.length/7); i++) ws.innerHTML += `<option value="${i}">SEMANA ${i+1}</option>`;
-            renderDashboard(); 
+            renderDashboard();
         }
 
-        /**
-         * RENDER DASHBOARD: Ejecuta todos los cálculos de KPIs y Gráficas
-         */
         function renderDashboard() {
             const ger = document.getElementById('filter_ger').value;
-            const camp = document.getElementById('filter_camp').value;
             const m = document.getElementById('filter_month').value;
             const w = document.getElementById('filter_week').value;
-            const query = document.getElementById('search_user').value.toUpperCase();
-
-            // Determina el rango de columnas a analizar
-            let rango = m === "ALL" ? globalDates.map((_,i)=>i) : (monthsFound[m]?.indices || []);
+            
+            let rango = monthsFound[m].indices;
             if(w !== "ALL") rango = rango.slice(parseInt(w)*7, (parseInt(w)+1)*7);
 
             let s_spr = 0, s_vic = 0, sprV = [], vicV = [], labels = [];
-            let filtered = rawDataFRows.filter(r => (!ger || r.ger === ger) && (!camp || r.camp === camp));
+            let filtered = rawDataFRows.filter(r => r.ger === ger);
 
-            // Cálculo acumulado por día para la gráfica
             rango.forEach(idx => {
-                labels.push(globalDates[idx].substring(0,5));
+                labels.push(globalDates[idx]);
                 let dS = 0, dV = 0;
                 filtered.forEach(r => {
                     const s = tToSec(r.daily[idx]);
                     if(r.sis.includes('SPR')) dS += s; else dV += s;
                 });
                 s_spr += dS; s_vic += dV;
-                sprV.push((dS/3600).toFixed(1)); vicV.push((dV/3600).toFixed(1));
+                sprV.push(dS/3600); vicV.push(dV/3600);
             });
 
-            // Actualización de KPIs en pantalla
-            document.getElementById('k_spr').innerText = secToT(s_spr);
-            document.getElementById('k_vic').innerText = secToT(s_vic);
-            document.getElementById('acum_sem').innerText = ((s_spr + s_vic)/3600).toFixed(1) + "h";
-
-            // CONFIGURACIÓN DE GRÁFICAS (Plotly)
-            const layout = { margin: {t:20, b:40, l:30, r:10}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{size:10} };
+            // GRÁFICAS
             Plotly.newPlot('g_weekly', [
-                { x:labels, y:sprV, name:'Sprinklr', type:'scatter', mode:'lines+markers', line:{color:'#2563eb', width:3}, fill: 'tozeroy' },
-                { x:labels, y:vicV, name:'Vicidial', type:'scatter', mode:'lines+markers', line:{color:'#f97316', width:3}, fill: 'tozeroy' }
-            ], layout, {responsive: true, displayModeBar: false});
+                { x: labels, y: sprV, name: 'Sprinklr', type: 'scatter', line: {color: '#2563eb'} },
+                { x: labels, y: vicV, name: 'Vicidial', type: 'scatter', line: {color: '#f97316'} }
+            ], { title: 'HORAS DIARIAS', margin: {t:40, b:40, l:40, r:10} });
 
             Plotly.newPlot('g_pie', [{
-                labels: ['Sprinklr', 'Vicidial'], values:[s_spr, s_vic], type:'pie', marker:{colors:['#2563eb', '#f97316']}, hole: 0.4
-            }], layout, {responsive: true, displayModeBar: false});
+                labels: ['Sprinklr', 'Vicidial'], values: [s_spr, s_vic], type: 'pie', marker: {colors:['#2563eb', '#f97316']}
+            }], { title: 'MIX DE USO' });
 
-            /**
-             * FILTRO DE ALERTAS:
-             * Identifica a personas que tengan tiempo registrado (sec > 0)
-             * pero que falten 2 o más días en el rango.
-             */
-            const alerts = Object.values(groupedData).map(u => {
-                let act = 0, sec = 0;
+            // CALENDARIO
+            let h = "";
+            const asesoresGerencia = Object.values(groupedData).filter(d => d.ger === ger);
+            asesoresGerencia.forEach(d => {
+                h += `<tr><td class="p-4 font-bold uppercase">${d.name}</td><td class="p-4 flex gap-1 flex-wrap">`;
                 rango.forEach(idx => {
-                    let dC = 0; Object.values(u.systems).forEach(s => dC += tToSec(s.daily[idx]));
-                    if(dC > 0) act++; sec += dC;
-                });
-                return { ...u, act, inact: rango.length - act, sec };
-            }).filter(x => x.sec > 0 && x.inact >= 2 && (!ger || x.ger === ger) && (!camp || x.camp === camp) && x.name.toUpperCase().includes(query));
-
-            document.getElementById('k_inact').innerText = alerts.length;
-            document.getElementById('alerta_panel').classList.toggle('hidden', alerts.length === 0);
-            document.getElementById('t_body_alerts').innerHTML = alerts.sort((a,b)=>b.inact - a.inact).map(i => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-bold uppercase">${i.name} <br> <span class="text-[8px] text-slate-400 italic">${i.ger}</span></td>
-                    <td class="p-4 text-center text-blue-600 font-bold">${i.act} DÍAS</td>
-                    <td class="p-4 text-center text-red-600 font-black bg-red-50">${i.inact} DÍAS</td>
-                    <td class="p-4 font-mono font-bold">${secToT(i.sec)}</td>
-                </tr>`).join('');
-
-            /**
-             * CALENDARIO DE AUDITORÍA:
-             * Dibuja los cuadritos de colores según la Gerencia seleccionada.
-             */
-            if(ger) {
-                let h = "";
-                const f = Object.values(groupedData).filter(d => d.ger === ger && d.name.toUpperCase().includes(query) && (!camp || d.camp === camp)).sort((a,b)=>a.name.localeCompare(b.name));
-                f.forEach(d => {
-                    h += `<tr class="bg-white/5 text-white/40 font-black text-[8px] uppercase tracking-widest"><td colspan="2" class="p-3 pl-4">${d.name}</td></tr>`;
+                    let hasCnx = false, sisType = "";
                     Object.keys(d.systems).forEach(s => {
-                        const dots = rango.map(idx => {
-                            const val = d.systems[s].daily[idx];
-                            return `<div class="day-box ${tToSec(val)>0?(s.includes('SPR')?'spr-high':'vic-high'):'day-off'}" title="${val}">${globalDates[idx].split('/')[0]}</div>`;
-                        }).join('');
-                        h += `<tr><td class="p-2 text-[7px] pl-6 w-24 text-white/30 font-bold uppercase">${s}</td><td class="p-2 flex flex-wrap gap-1">${dots}</td></tr>`;
+                        if(tToSec(d.systems[s].daily[idx]) > 0) { hasCnx = true; sisType = s; }
                     });
+                    h += `<div class="day-box ${hasCnx ? (sisType.includes('SPR') ? 'spr-high' : 'vic-high') : 'day-off'}">${globalDates[idx].split('/')[0]}</div>`;
                 });
-                document.getElementById('t_body_calendar').innerHTML = h;
-            }
-        }
-
-        /**
-         * EXPORTAR A EXCEL: Genera reporte basado en el total acumulado
-         */
-        function generarExcel() {
-            const data = Object.values(groupedData).map(u => {
-                let sec = 0, act = 0;
-                globalDates.forEach((_, i) => {
-                    let dC = 0; Object.values(u.systems).forEach(s => dC += tToSec(s.daily[i]));
-                    if(dC > 0) act++; sec += dC;
-                });
-                return { "ASESOR": u.name, "GERENCIA": u.ger, "CAMPAÑA": u.camp, "HORAS TOTALES": secToT(sec), "DÍAS ACTIVOS": act };
+                h += `</td></tr>`;
             });
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
-            XLSX.writeFile(wb, "GMT_REPORTE_AUDITORIA.xlsx");
+            document.getElementById('t_body_calendar').innerHTML = h;
         }
     </script>
 </body>
