@@ -6,29 +6,33 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
-        .spr-high { background-color: #2563eb; color: white; } /* Azul para Sprinklr */
-        .vic-high { background-color: #f97316; color: white; } /* Naranja para Vicidial */
+        .spr-high { background-color: #2563eb; color: white; }
+        .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        .table-scroll { max-height: 70vh; overflow-y: auto; }
+        .table-scroll { max-height: 75vh; overflow-y: auto; }
+        /* Estilo para el scroll */
+        .table-scroll::-webkit-scrollbar { width: 8px; }
+        .table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-50 p-4">
     <div class="max-w-7xl mx-auto">
         
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex justify-between items-center">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-black text-slate-900 tracking-tighter">GMT <span class="text-blue-600">AUDITORÍA</span></h1>
-                <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase">Esperando archivo...</p>
+                <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center md:text-left">Iniciando sistema...</p>
             </div>
-            <div class="flex gap-2">
-                <select id="filter_ger" onchange="render()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl outline-none"></select>
-                <input type="text" id="search" oninput="render()" placeholder="BUSCAR NOMBRE..." class="border-2 border-slate-200 text-xs px-4 py-2 rounded-xl outline-none w-48">
+            <div class="flex flex-wrap justify-center gap-2">
+                <select id="filter_ger" onchange="render()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl outline-none focus:border-blue-500"></select>
+                <input type="text" id="search" oninput="render()" placeholder="BUSCAR ASESOR..." class="border-2 border-slate-200 text-xs px-4 py-2 rounded-xl outline-none w-48 focus:border-blue-500">
             </div>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div class="bg-red-600 p-3 text-white text-[10px] font-black uppercase tracking-widest">
-                ⚠️ Listado de Conexión (Menor actividad primero)
+        <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            <div class="bg-slate-900 p-4 flex justify-between items-center">
+                <h2 class="text-white text-[10px] font-black uppercase tracking-widest">⚠️ Alertas de Conexión (Menor actividad primero)</h2>
+                <div id="date-range" class="text-blue-400 text-[9px] font-bold uppercase"></div>
             </div>
             <div class="table-scroll">
                 <table class="w-full text-left border-collapse">
@@ -37,8 +41,8 @@
                             <th class="p-4">Ejecutivo</th>
                             <th class="p-4 text-center">Días Activos</th>
                             <th class="p-4 text-center">Horas Totales</th>
-                            <th class="p-4">Gerencia</th>
-                            <th class="p-4">Detalle Diario</th>
+                            <th class="p-4">Gerencia / Campaña</th>
+                            <th class="p-4">Detalle de Conexión</th>
                         </tr>
                     </thead>
                     <tbody id="t_body" class="divide-y divide-slate-100 text-[11px]">
@@ -47,12 +51,13 @@
             </div>
         </div>
 
-        <div id="debug-log" class="mt-4 p-4 bg-slate-100 text-slate-500 font-mono text-[10px] rounded-lg hidden"></div>
+        <div id="debug-log" class="mt-4 p-4 bg-slate-800 text-green-400 font-mono text-[9px] rounded-lg hidden"></div>
     </div>
 
     <script>
         let rawData = [];
         let dates = [];
+        let dateStartIndex = 9;
 
         function showLog(msg) {
             const d = document.getElementById('debug-log');
@@ -60,14 +65,14 @@
             d.innerHTML += `> ${msg}<br>`;
         }
 
-        // Convertir HH:MM:SS a segundos
         const tToSec = (t) => {
-            if (!t || t === "0" || t.includes('N/D')) return 0;
-            const p = t.split(':');
-            return p.length >= 2 ? (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0)) : 0;
+            if (!t || t === "0" || t === "00:00:00" || t.includes('N/D') || t.trim() === "") return 0;
+            const p = t.trim().split(':');
+            if (p.length === 3) return (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2]));
+            if (p.length === 2) return (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60);
+            return 0;
         };
 
-        // Convertir segundos a HH:MM
         const secToT = (s) => {
             const h = Math.floor(s / 3600);
             const m = Math.floor((s % 3600) / 60);
@@ -77,47 +82,53 @@
         async function cargarDatos() {
             try {
                 const response = await fetch('data_02.csv?v=' + Date.now());
-                if (!response.ok) throw new Error("No se encuentra data_02.csv");
+                if (!response.ok) throw new Error("Archivo data_02.csv no encontrado");
                 
                 const text = await response.text();
                 const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
                 
-                // Detectar si el CSV usa , o ;
                 const sep = lines[0].includes(';') ? ';' : ',';
-                const headers = lines[0].split(sep);
+                const headers = lines[0].split(sep).map(h => h.trim());
                 
-                // Extraer fechas (desde columna 9 en adelante)
-                dates = headers.slice(9).filter(h => h.includes('/')).map(h => h.trim());
+                // Buscar dónde empiezan las fechas realmente (primera columna con '/')
+                dateStartIndex = headers.findIndex(h => h.includes('/'));
+                if (dateStartIndex === -1) dateStartIndex = 9;
+
+                // Extraer solo columnas que tengan formato de fecha
+                dates = headers.slice(dateStartIndex).filter(h => h.includes('/'));
+                document.getElementById('date-range').innerText = `Periodo: ${dates[0]} - ${dates[dates.length-1]}`;
                 
                 const tempMap = {};
                 lines.slice(1).forEach(line => {
                     const c = line.split(sep).map(x => x.replace(/"/g, '').trim());
-                    if (c.length < 10) return;
+                    if (c.length < 5) return;
 
-                    const name = c[1];
-                    const sis = c[0].toUpperCase();
-                    const ger = c[3] || "N/D";
-                    const daily = c.slice(9, 9 + dates.length);
+                    const sistema = c[0].toUpperCase();
+                    const nombre = c[1];
+                    const gerencia = c[3] || "N/D";
+                    const campana = c[4] || "N/D";
+                    // Extraer los datos diarios basándonos en el índice dinámico
+                    const daily = c.slice(dateStartIndex, dateStartIndex + dates.length);
 
-                    if (!tempMap[name]) {
-                        tempMap[name] = { name, ger, systems: {} };
+                    if (!tempMap[nombre]) {
+                        tempMap[nombre] = { nombre, gerencia, campana, systems: {} };
                     }
-                    tempMap[name].systems[sis] = daily;
+                    tempMap[nombre].systems[sistema] = daily;
                 });
 
                 rawData = Object.values(tempMap);
                 
-                // Llenar filtro de Gerencias
-                const gers = [...new Set(rawData.map(r => r.ger))].sort();
-                document.getElementById('filter_ger').innerHTML = '<option value="">TODAS LAS GERENCIAS</option>' + 
+                const gers = [...new Set(rawData.map(r => r.gerencia))].sort();
+                document.getElementById('filter_ger').innerHTML = '<option value="">GERENCIAS (TODAS)</option>' + 
                     gers.map(g => `<option value="${g}">${g}</option>`).join('');
 
-                document.getElementById('status-text').innerText = "BASE CARGADA: " + rawData.length + " REGISTROS";
+                document.getElementById('status-text').innerText = `CONEXIÓN ACTUALIZADA: ${rawData.length} ASESORES`;
                 render();
 
             } catch (err) {
-                showLog("ERROR CRÍTICO: " + err.message);
-                document.getElementById('status-text').innerText = "ERROR AL CARGAR CSV";
+                showLog("ERROR: " + err.message);
+                document.getElementById('status-text').innerText = "ERROR DE CARGA";
+                document.getElementById('status-text').style.color = "red";
             }
         }
 
@@ -131,14 +142,17 @@
                 let daysAct = 0;
                 let dailyMatrix = [];
 
+                // Recorrer cada fecha detectada
                 for (let i = 0; i < dates.length; i++) {
                     let daySec = 0;
                     let type = 'SPR';
+                    
                     Object.keys(u.systems).forEach(s => {
                         const sSec = tToSec(u.systems[s][i]);
                         daySec += sSec;
                         if (s.includes('VICI')) type = 'VIC';
                     });
+
                     if (daySec > 0) daysAct++;
                     totalSec += daySec;
                     dailyMatrix.push({ sec: daySec, type, label: dates[i].split('/')[0] });
@@ -148,26 +162,34 @@
 
             // Filtros
             processed = processed.filter(u => 
-                (!filterGer || u.ger === filterGer) && 
-                (!searchName || u.name.toUpperCase().includes(searchName))
+                (!filterGer || u.gerencia === filterGer) && 
+                (!searchName || u.nombre.toUpperCase().includes(searchName))
             );
 
-            // ORDENAR: El que menos días tiene va ARRIBA (Alerta)
+            // ORDENAR POR ALERTAS: Los que menos días tienen van ARRIBA
             processed.sort((a, b) => a.daysAct - b.daysAct);
 
             tbody.innerHTML = processed.map(u => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 font-bold text-slate-800 uppercase">${u.name}</td>
+                <tr class="hover:bg-blue-50/50 transition-colors">
+                    <td class="p-4">
+                        <div class="font-bold text-slate-800 uppercase leading-none">${u.nombre}</div>
+                        <div class="text-[9px] text-slate-400 mt-1 font-medium">${u.gerencia}</div>
+                    </td>
                     <td class="p-4 text-center">
-                        <span class="px-3 py-1 rounded-full font-black ${u.daysAct < 5 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
+                        <span class="px-3 py-1 rounded-lg font-black text-[10px] ${u.daysAct < 4 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">
                             ${u.daysAct} DÍAS
                         </span>
                     </td>
-                    <td class="p-4 text-center font-mono font-bold text-slate-500">${secToT(u.totalSec)}</td>
-                    <td class="p-4 text-slate-400 font-bold uppercase text-[9px]">${u.ger}</td>
-                    <td class="p-4 flex gap-1 flex-wrap">
+                    <td class="p-4 text-center">
+                        <div class="font-mono font-bold text-slate-600">${secToT(u.totalSec)}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="text-[9px] font-bold text-slate-400 uppercase">${u.campana}</div>
+                    </td>
+                    <td class="p-4 flex gap-1 flex-wrap max-w-xs">
                         ${u.dailyMatrix.map(d => `
-                            <div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" title="Día ${d.label}: ${secToT(d.sec)}">
+                            <div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" 
+                                 title="${d.label}: ${secToT(d.sec)}">
                                 ${d.label}
                             </div>
                         `).join('')}
