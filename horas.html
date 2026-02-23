@@ -2,71 +2,94 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT CONTROL | AUDITORÍA</title>
+    <title>GMT CONTROL | DASHBOARD AUDITORÍA</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <style>
-        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
+        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; cursor: help; }
         .spr-high { background-color: #2563eb; color: white; }
         .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        .table-scroll { max-height: 70vh; overflow-y: auto; border-radius: 0 0 1.5rem 1.5rem; }
+        .kpi-card { transition: transform 0.2s; }
+        .kpi-card:hover { transform: translateY(-5px); }
+        .table-scroll { max-height: 500px; overflow-y: auto; }
     </style>
 </head>
-<body class="bg-slate-100 p-4">
+<body class="bg-slate-50 p-4">
     <div class="max-w-7xl mx-auto">
         
-        <div class="bg-white p-6 rounded-2xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-black text-slate-900 tracking-tighter uppercase">GMT <span class="text-blue-600">Auditoría</span></h1>
-                <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Esperando archivo...</p>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tighter uppercase">GMT <span class="text-blue-600">AUDITORÍA BI</span></h1>
+                <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cargando inteligencia de datos...</p>
             </div>
-            
             <div class="flex flex-wrap justify-center gap-2">
-                <select id="filter_ger" onchange="render()" class="bg-slate-50 border border-slate-200 text-[10px] font-black px-4 py-2 rounded-xl outline-none focus:border-blue-500 uppercase"></select>
-                <input type="text" id="search" oninput="render()" placeholder="BUSCAR ASESOR..." class="border border-slate-200 text-[10px] font-black px-4 py-2 rounded-xl outline-none w-48 focus:border-blue-500 uppercase">
-                <button onclick="generarExcel()" class="bg-emerald-600 text-white text-[10px] font-black px-5 py-2 rounded-xl hover:bg-emerald-700 transition-all uppercase">📊 Excel</button>
+                <select id="filter_ger" onchange="render()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl focus:border-blue-500 outline-none"></select>
+                <input type="text" id="search" oninput="render()" placeholder="BUSCAR ASESOR..." class="border-2 border-slate-200 text-xs px-4 py-2 rounded-xl focus:border-blue-500 outline-none w-48 uppercase">
+                <button onclick="generarExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">EXCEL</button>
             </div>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <p class="text-[9px] font-black text-slate-400 uppercase">Total Horas Sprinklr</p>
+                <h3 id="kpi-spr" class="text-2xl font-black text-blue-600">0h</h3>
+            </div>
+            <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <p class="text-[9px] font-black text-slate-400 uppercase">Total Horas Vicidial</p>
+                <h3 id="kpi-vic" class="text-2xl font-black text-orange-500">0h</h3>
+            </div>
+            <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <p class="text-[9px] font-black text-slate-400 uppercase">Asesores Analizados</p>
+                <h3 id="kpi-count" class="text-2xl font-black text-slate-800">0</h3>
+            </div>
+            <div class="kpi-card bg-red-600 p-4 rounded-2xl shadow-lg shadow-red-200">
+                <p class="text-[9px] font-black text-white/80 uppercase">Estado Crítico</p>
+                <h3 id="kpi-critico" class="text-2xl font-black text-white">0</h3>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-[10px] font-black uppercase text-slate-400 mb-4">Evolución Diaria de Conexión</h4>
+                <div id="chart-line" style="height: 300px;"></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-[10px] font-black uppercase text-slate-400 mb-4">Mix de Uso por Sistema</h4>
+                <div id="chart-pie" style="height: 300px;"></div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             <div class="bg-slate-900 p-4 flex justify-between items-center">
-                <h2 class="text-white text-[10px] font-black uppercase tracking-widest italic">Detalle de Conexión 2026</h2>
+                <h2 class="text-white text-[10px] font-black uppercase tracking-widest italic">⚠️ Reporte de Inactividad y Auditoría Diaria</h2>
                 <div id="date-range" class="text-blue-400 text-[9px] font-bold uppercase"></div>
             </div>
-            
             <div class="table-scroll">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 sticky top-0 border-b z-10">
-                        <tr class="text-[9px] text-slate-400 font-black uppercase">
-                            <th class="p-4">Ejecutivo / Gerencia</th>
-                            <th class="p-4 text-center">Actividad</th>
-                            <th class="p-4 text-center">Horas Acum.</th>
+                    <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
+                        <tr class="text-[10px] text-slate-400 font-black uppercase">
+                            <th class="p-4">Asesor</th>
+                            <th class="p-4 text-center">Status</th>
+                            <th class="p-4 text-center">Horas</th>
                             <th class="p-4">Campaña</th>
-                            <th class="p-4 text-center">Calendario de Auditoría</th>
+                            <th class="p-4 text-center">Calendario</th>
                         </tr>
                     </thead>
-                    <tbody id="t_body" class="divide-y divide-slate-100">
-                        </tbody>
+                    <tbody id="t_body" class="divide-y divide-slate-100 text-[11px]"></tbody>
                 </table>
             </div>
-        </div>
-
-        <div id="debug-console" class="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl hidden">
-            <p class="text-red-600 font-black text-xs uppercase mb-2">Error de Carga:</p>
-            <div id="error-msg" class="text-red-500 font-mono text-[10px]"></div>
         </div>
     </div>
 
     <script>
-        // --- ARQUITECTURA DE DATOS: VARIABLES ---
         let rawData = [];
         let dates = [];
 
-        // --- LÓGICA DE TIEMPO ---
+        // 2. LÓGICA DE TIEMPO
         const tToSec = (t) => {
-            if (!t || t.toString().includes('N/D')) return 0;
+            if (!t || t == "0" || t.toString().includes('N/D')) return 0;
             const p = t.toString().trim().split(':');
             return p.length >= 2 ? (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0)) : 0;
         };
@@ -77,143 +100,111 @@
             return `${h}h ${m}m`;
         };
 
-        // --- ARQUITECTURA DE DATOS: PROCESAMIENTO DINÁMICO ---
+        // 2. ARQUITECTURA DE DATOS: CARGA DINÁMICA
         async function cargarDatos() {
-            const status = document.getElementById('status-text');
-            const debug = document.getElementById('debug-console');
-            const errorMsg = document.getElementById('error-msg');
-
             try {
-                // INTENTO DE CARGAR data_02.csv (Cámbialo a data_01.csv si es necesario)
-                const response = await fetch('data_02.csv'); 
-                if (!response.ok) throw new Error("No se pudo leer el archivo CSV. Asegúrate de que 'data_02.csv' esté en la misma carpeta.");
-
+                // Probamos con data_02.csv o data_01.csv
+                const response = await fetch('data_02.csv');
                 const text = await response.text();
                 const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-                if (lines.length < 2) throw new Error("El archivo CSV está vacío o no tiene el formato correcto.");
-
                 const sep = lines[0].includes(';') ? ';' : ',';
                 const headers = lines[0].split(sep).map(h => h.trim());
                 
-                // Buscar inicio de fechas dinámicamente
                 const dateIdx = headers.findIndex(h => h.includes('/'));
                 dates = headers.slice(dateIdx).filter(h => h.includes('/'));
-                document.getElementById('date-range').innerText = `Rango: ${dates[0]} al ${dates[dates.length-1]}`;
+                document.getElementById('date-range').innerText = `Periodo: ${dates[0]} - ${dates[dates.length-1]}`;
 
-                // Agrupación inteligente
                 const tempMap = {};
                 lines.slice(1).forEach(line => {
                     const c = line.split(sep).map(x => x.replace(/"/g, '').trim());
                     if (c.length < 5) return;
-
-                    const sistema = c[0].toUpperCase();
-                    const nombre = c[1];
-                    const gerencia = c[3] || "S/G";
-                    const campana = c[4] || "S/C";
-                    const daily = c.slice(dateIdx);
-
-                    if (!tempMap[nombre]) {
-                        tempMap[nombre] = { nombre, gerencia, campana, systems: {} };
-                    }
-                    tempMap[nombre].systems[sistema] = daily;
+                    const sistema = c[0].toUpperCase(), nombre = c[1], ger = c[3] || "S/G", camp = c[4] || "S/C";
+                    if (!tempMap[nombre]) tempMap[nombre] = { nombre, ger, camp, systems: {} };
+                    tempMap[nombre].systems[sistema] = c.slice(dateIdx);
                 });
 
                 rawData = Object.values(tempMap);
-
-                // Llenar filtro de Gerencia
-                const gers = [...new Set(rawData.map(r => r.gerencia))].sort();
-                document.getElementById('filter_ger').innerHTML = '<option value="">GERENCIAS (TODAS)</option>' + 
-                    gers.map(g => `<option value="${g}">${g}</option>`).join('');
-
-                status.innerText = `ONLINE: ${rawData.length} ASESORES CARGADOS`;
-                status.classList.replace('text-slate-400', 'text-emerald-500');
+                const gers = [...new Set(rawData.map(r => r.ger))].sort();
+                document.getElementById('filter_ger').innerHTML = '<option value="">GERENCIAS (TODAS)</option>' + gers.map(g => `<option value="${g}">${g}</option>`).join('');
+                
+                document.getElementById('status-text').innerText = "SISTEMA SINCRONIZADO";
                 render();
-
-            } catch (err) {
-                status.innerText = "ERROR DE CARGA";
-                status.classList.replace('text-slate-400', 'text-red-500');
-                debug.classList.remove('hidden');
-                errorMsg.innerText = err.message;
+            } catch (e) {
+                document.getElementById('status-text').innerText = "ERROR AL CARGAR CSV";
             }
         }
 
-        // --- COMPONENTES DEL TABLERO: RENDER ---
+        // 3. COMPONENTES: RENDER Y GRÁFICAS
         function render() {
             const filterGer = document.getElementById('filter_ger').value;
-            const searchName = document.getElementById('search').value.toUpperCase();
-            const tbody = document.getElementById('t_body');
+            const search = document.getElementById('search').value.toUpperCase();
+            
+            let sprTotal = 0, vicTotal = 0, criticos = 0;
+            let dailyTotals = new Array(dates.length).fill(0);
 
             let processed = rawData.map(u => {
-                let totalSec = 0;
-                let daysAct = 0;
-                let dailyMatrix = [];
-
-                for (let i = 0; i < dates.length; i++) {
-                    let daySec = 0;
-                    let hasSpr = false;
-                    
+                let uSec = 0, uDays = 0, matrix = [], hasSpr = false;
+                dates.forEach((d, i) => {
+                    let dSec = 0;
                     Object.keys(u.systems).forEach(s => {
-                        const sSec = tToSec(u.systems[s][i]);
-                        daySec += sSec;
-                        if (s.includes('SPR')) hasSpr = true;
+                        let sSec = tToSec(u.systems[s][i]);
+                        dSec += sSec;
+                        if (s.includes('SPR')) { sprTotal += sSec; hasSpr = true; } else { vicTotal += sSec; }
                     });
+                    if (dSec > 0) uDays++;
+                    uSec += dSec;
+                    dailyTotals[i] += dSec;
+                    matrix.push({ sec: dSec, type: hasSpr ? 'SPR' : 'VIC', label: d.split('/')[0] });
+                });
+                if (uDays < 4) criticos++;
+                return { ...u, uSec, uDays, matrix };
+            }).filter(u => (!filterGer || u.ger === filterGer) && (!search || u.nombre.toUpperCase().includes(search)));
 
-                    if (daySec > 0) daysAct++;
-                    totalSec += daySec;
-                    dailyMatrix.push({ sec: daySec, type: hasSpr ? 'SPR' : 'VIC', label: dates[i].split('/')[0] });
-                }
-                return { ...u, totalSec, daysAct, dailyMatrix };
-            });
+            // Ordenar por Alerta
+            processed.sort((a, b) => a.uDays - b.uDays);
 
-            // Aplicar Filtros
-            processed = processed.filter(u => 
-                (!filterGer || u.gerencia === filterGer) && 
-                (!searchName || u.nombre.toUpperCase().includes(searchName))
-            );
+            // Actualizar KPIs
+            document.getElementById('kpi-spr').innerText = Math.round(sprTotal/3600) + "h";
+            document.getElementById('kpi-vic').innerText = Math.round(vicTotal/3600) + "h";
+            document.getElementById('kpi-count').innerText = processed.length;
+            document.getElementById('kpi-critico').innerText = criticos;
 
-            // Ordenar por Alerta (menos días activos primero)
-            processed.sort((a, b) => a.daysAct - b.daysAct);
-
-            tbody.innerHTML = processed.map(u => `
+            // Render Tabla
+            document.getElementById('t_body').innerHTML = processed.map(u => `
                 <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4">
-                        <div class="font-black text-slate-800 uppercase text-[10px] tracking-tighter">${u.nombre}</div>
-                        <div class="text-[8px] text-slate-400 font-bold uppercase">${u.gerencia}</div>
-                    </td>
-                    <td class="p-4 text-center">
-                        <span class="px-2 py-1 rounded-md font-black text-[8px] ${u.daysAct < 4 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">
-                            ${u.daysAct} DÍAS
-                        </span>
-                    </td>
-                    <td class="p-4 text-center">
-                        <div class="font-mono font-bold text-slate-600 text-[10px]">${secToT(u.totalSec)}</div>
-                    </td>
-                    <td class="p-4 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">${u.campana}</td>
-                    <td class="p-4 flex gap-1 justify-center flex-wrap">
-                        ${u.dailyMatrix.map(d => `
-                            <div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" title="${d.sec > 0 ? secToT(d.sec) : 'Sin conexión'}">
-                                ${d.label}
-                            </div>
-                        `).join('')}
-                    </td>
+                    <td class="p-4"><div class="font-black text-slate-800 uppercase text-[10px]">${u.nombre}</div><div class="text-[8px] text-slate-400 font-bold italic">${u.ger}</div></td>
+                    <td class="p-4 text-center"><span class="px-2 py-1 rounded-md font-black text-[8px] ${u.uDays < 4 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">${u.uDays} DÍAS</span></td>
+                    <td class="p-4 text-center font-mono font-bold text-slate-600 text-[10px]">${secToT(u.uSec)}</td>
+                    <td class="p-4 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">${u.camp}</td>
+                    <td class="p-4 flex gap-1 justify-center flex-wrap">${u.matrix.map(d => `<div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" title="${secToT(d.sec)}">${d.label}</div>`).join('')}</td>
                 </tr>
             `).join('');
+
+            // 3. VISUALIZACIÓN GRÁFICA (Plotly.js)
+            Plotly.newPlot('chart-line', [{
+                x: dates, y: dailyTotals.map(s => s/3600), type: 'scatter', mode: 'lines+markers',
+                line: { shape: 'spline', color: '#2563eb' }, fill: 'tozeroy'
+            }], { margin: { t:10, b:40, l:40, r:10 }, font: { size: 9 } });
+
+            Plotly.newPlot('chart-pie', [{
+                values: [sprTotal, vicTotal], labels: ['Sprinklr', 'Vicidial'], type: 'pie',
+                marker: { colors: ['#2563eb', '#f97316'] }
+            }], { margin: { t:10, b:10, l:10, r:10 }, font: { size: 9 } });
         }
 
-        // --- HERRAMIENTAS DE CONTROL: EXPORTAR ---
         function generarExcel() {
-            const exportData = rawData.map(u => {
-                let sec = 0, act = 0;
+            const data = rawData.map(u => {
+                let sec = 0, days = 0;
                 dates.forEach((d, i) => {
                     let dSec = 0; Object.values(u.systems).forEach(s => dSec += tToSec(s[i]));
-                    if(dSec > 0) act++; sec += dSec;
+                    if (dSec > 0) days++; sec += dSec;
                 });
-                return { "ASESOR": u.nombre, "GERENCIA": u.gerencia, "CAMPAÑA": u.campana, "HORAS": secToT(sec), "DÍAS": act };
+                return { "ASESOR": u.nombre, "GERENCIA": u.ger, "CAMPAÑA": u.camp, "HORAS": secToT(sec), "DÍAS": days };
             });
-            const ws = XLSX.utils.json_to_sheet(exportData);
+            const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
-            XLSX.writeFile(wb, "GMT_REPORTE.xlsx");
+            XLSX.writeFile(wb, "GMT_REPORTE_BI.xlsx");
         }
 
         window.onload = cargarDatos;
