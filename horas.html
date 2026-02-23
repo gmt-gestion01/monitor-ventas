@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT AUDIT | Dashboard Crítico</title>
+    <title>GMT AUDIT | Dashboard Automático</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -11,8 +11,7 @@
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
         .sticky-thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 20; border-bottom: 2px solid #e2e8f0; }
-        .card-stat { border-left: 4px solid #ef4444; transition: all 0.3s; }
-        .card-stat:hover { transform: scale(1.02); }
+        .card-stat { border-left: 4px solid #ef4444; transition: all 0.3s; background: white; }
     </style>
 </head>
 <body class="bg-slate-100 p-4 font-sans text-slate-900">
@@ -22,8 +21,8 @@
             <div class="flex items-center gap-4">
                 <div class="bg-slate-900 p-3 rounded-2xl text-white font-black italic text-xl">GMT</div>
                 <div>
-                    <h1 class="text-xl font-black uppercase tracking-tighter">Auditoría <span class="text-red-600">Baja Asistencia</span></h1>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="status_file">Esperando archivo CSV...</p>
+                    <h1 class="text-xl font-black uppercase tracking-tighter">Auditoría <span class="text-red-600">En Vivo</span></h1>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="status_file">Sincronizando con GitHub...</p>
                 </div>
             </div>
             
@@ -34,21 +33,19 @@
                     <span class="text-[9px] font-black text-slate-400">AL</span>
                     <input type="number" id="dia_fin" value="31" min="1" max="31" class="w-12 bg-white border rounded-lg text-[11px] font-bold p-1 text-center outline-none">
                 </div>
-                <select id="sel_mes" class="bg-white text-slate-900 text-[11px] font-bold px-5 py-3 rounded-2xl border outline-none cursor-pointer"></select>
-                <button onclick="document.getElementById('csv_input').click()" class="bg-blue-600 text-white px-5 py-3 rounded-2xl text-[11px] font-black uppercase shadow-lg hover:bg-blue-700 transition-all">📂 Cargar Archivo</button>
-                <input type="file" id="csv_input" accept=".csv" class="hidden">
+                <select id="sel_mes" class="bg-slate-900 text-white text-[11px] font-bold px-5 py-3 rounded-2xl border-none outline-none cursor-pointer hover:bg-slate-800 transition-all"></select>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-5 py-3 rounded-2xl text-[11px] font-black uppercase shadow-lg hover:bg-blue-700 transition-all">🔄 Recargar Datos</button>
             </div>
         </div>
 
-        <div id="cards_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            </div>
+        <div id="cards_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div class="lg:col-span-2 bg-white p-6 rounded-3xl border shadow-sm min-h-[350px]">
-                <div id="chart_main"></div>
+            <div class="lg:col-span-2 bg-white p-6 rounded-3xl border shadow-sm">
+                <div id="chart_main" style="height: 350px;"></div>
             </div>
-            <div class="bg-white p-6 rounded-3xl border shadow-sm min-h-[350px]">
-                <div id="chart_gerencias"></div>
+            <div class="bg-white p-6 rounded-3xl border shadow-sm">
+                <div id="chart_gerencias" style="height: 350px;"></div>
             </div>
         </div>
 
@@ -58,13 +55,13 @@
                 <button onclick="descargarAlertas()" class="bg-red-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-700 transition-all shadow-md">📥 Exportar Alertas Excel</button>
             </div>
             
-            <div class="overflow-x-auto max-h-[500px]">
+            <div class="overflow-x-auto max-h-[600px]">
                 <table class="w-full text-left text-[11px]">
                     <thead class="sticky-thead bg-slate-50 text-slate-500 font-black uppercase">
                         <tr>
-                            <th class="p-5">Ejecutivo</th>
-                            <th class="p-5 text-center">Calendario</th>
-                            <th class="p-5 text-center bg-red-600 text-white">Días Conectado (Bajo Audit)</th>
+                            <th class="p-5">Ejecutivo / Gerencia</th>
+                            <th class="p-5 text-center">Asistencia Diaria</th>
+                            <th class="p-5 text-center bg-red-600 text-white">Días Conectado (Audit)</th>
                             <th class="p-5 text-right">Hrs Totales</th>
                         </tr>
                     </thead>
@@ -75,14 +72,24 @@
     </div>
 
     <script>
+        const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
         let dataGlobal = {}, fechasGlobal = [], mesesDisp = {}, alertasActuales = [];
 
-        document.getElementById('csv_input').addEventListener('change', e => {
-            if(!e.target.files[0]) return;
-            const reader = new FileReader();
-            reader.onload = ev => procesarCSV(ev.target.result);
-            reader.readAsText(e.target.files[0]);
-        });
+        // Cargar automáticamente al iniciar
+        window.onload = cargarDesdeGitHub;
+
+        async function cargarDesdeGitHub() {
+            document.getElementById('status_file').innerText = "⏳ DESCARGANDO DATOS...";
+            try {
+                const response = await fetch(GITHUB_URL);
+                if (!response.ok) throw new Error("No se pudo acceder al archivo en GitHub");
+                const csvText = await response.text();
+                procesarCSV(csvText);
+            } catch (err) {
+                document.getElementById('status_file').innerText = "❌ ERROR AL CARGAR: " + err.message;
+                console.error(err);
+            }
+        }
 
         function t2s(t) {
             const p = t?.split(':');
@@ -105,40 +112,49 @@
                   iGe = cab.indexOf("GERENCIA"), iEs = cab.indexOf("ESTATUS"),
                   iSi = cab.indexOf("SISTEMA");
 
-            dataGlobal = {}; fechasGlobal = []; let setF = new Set(), setG = new Set(); 
+            dataGlobal = {}; fechasGlobal = []; mesesDisp = {};
+            let setF = new Set(), setG = new Set();
 
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
                 if (col[iEs]?.toUpperCase() !== "ACTIVO" || !col[iSi]?.toUpperCase().includes("SPRINKLR")) return;
+                
                 const ag = col[iAg], fec = col[iDi], ger = col[iGe] || "S/G", mes = col[iMe]?.toUpperCase();
                 const mesId = fec.split('/')[1];
+                
                 setF.add(fec); setG.add(ger);
                 if(mesId) mesesDisp[mesId] = mes;
+
                 if (!dataGlobal[ag]) dataGlobal[ag] = { ag, ger, logs: {} };
                 dataGlobal[ag].logs[fec] = (dataGlobal[ag].logs[fec] || 0) + t2s(col[iHr]);
             });
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).sort().map(id => `<option value="${id}">${mesesDisp[id]}</option>`).join('');
-            document.getElementById('sel_ger').innerHTML = '<option value="ALL">GERENCIAS (VISTA GLOBAL)</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
             
-            document.getElementById('status_file').innerText = "✅ ARCHIVO CARGADO";
+            // Llenar selectores
+            const mesIds = Object.keys(mesesDisp).sort();
+            document.getElementById('sel_mes').innerHTML = mesIds.map(id => `<option value="${id}">${mesesDisp[id]}</option>`).join('');
+            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
+            
+            // Seleccionar último mes por defecto
+            if(mesIds.length) document.getElementById('sel_mes').value = mesIds[mesIds.length - 1];
+
+            document.getElementById('status_file').innerText = "✅ DATOS ACTUALIZADOS (GITHUB)";
             render();
         }
 
         function render() {
-            const mesSel = document.getElementById('sel_mes').value, 
-                  gerSel = document.getElementById('sel_ger').value,
-                  dIni = parseInt(document.getElementById('dia_inicio').value), 
-                  dFin = parseInt(document.getElementById('dia_fin').value);
-
-            if(!mesSel) return;
+            const mesSel = document.getElementById('sel_mes').value;
+            const gerSel = document.getElementById('sel_ger').value;
+            const dIni = parseInt(document.getElementById('dia_inicio').value);
+            const dFin = parseInt(document.getElementById('dia_fin').value);
 
             const fFilt = fechasGlobal.filter(f => {
                 const p = f.split('/'); return p[1] === mesSel && parseInt(p[0]) >= dIni && parseInt(p[0]) <= dFin;
             });
 
-            let list = [], timeline = fFilt.map(() => 0), statsGer = {}; alertasActuales = [];
+            let list = [], timeline = fFilt.map(() => 0), statsGer = {};
+            alertasActuales = [];
 
             Object.values(dataGlobal).forEach(u => {
                 let sum = 0, on = 0, off = 0, boxes = "";
@@ -151,7 +167,8 @@
                 if (sum === 0 && on === 0 && gerSel !== "ALL" && u.ger !== gerSel) return;
                 
                 if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0, alertas: 0 };
-                statsGer[u.ger].horas += sum; statsGer[u.ger].ops++;
+                statsGer[u.ger].horas += sum;
+                statsGer[u.ger].ops++;
                 if(off > 2 && sum > 0) {
                     statsGer[u.ger].alertas++;
                     alertasActuales.push({ag: u.ag, ger: u.ger, off, sum});
@@ -159,50 +176,51 @@
                 if (gerSel === "ALL" || u.ger === gerSel) list.push({ ...u, sum, on, off, boxes });
             });
 
+            // Orden de tabla: Menos asistencia arriba
             list.sort((a,b) => a.on - b.on);
 
-            // RENDER TARJETAS
+            // Render Tarjetas (Ordenadas por menos horas)
             const sortedGer = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
             document.getElementById('cards_container').innerHTML = sortedGer.map(([name, data]) => `
                 <div class="bg-white p-5 rounded-3xl border shadow-sm card-stat">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${name}</p>
-                    <h3 class="text-xl font-black text-slate-900">${s2t(data.horas)} <span class="text-[9px] text-slate-400 font-normal italic">Hrs</span></h3>
+                    <h3 class="text-xl font-black text-slate-900">${s2t(data.horas)} <span class="text-[10px] text-slate-400 font-normal">hrs</span></h3>
                     <div class="flex justify-between mt-3">
-                        <span class="text-[10px] font-bold text-slate-600 uppercase">👥 ${data.ops} Ops</span>
-                        <span class="text-[10px] font-bold text-red-600 uppercase">⚠️ ${data.alertas} Alertas</span>
+                        <span class="text-[10px] font-bold text-slate-600 uppercase">👤 ${data.ops} Ops.</span>
+                        <span class="text-[10px] font-bold text-red-500 uppercase">⚠️ ${data.alertas} Alertas</span>
                     </div>
                 </div>
             `).join('');
 
-            // RENDER TABLA
+            // Render Tabla
             document.getElementById('table_body').innerHTML = list.map(u => `
                 <tr>
                     <td class="p-5"><p class="font-black text-slate-800 uppercase">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold uppercase">${u.ger}</p></td>
                     <td class="p-5 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
-                    <td class="p-5 text-center font-black text-red-600 bg-red-50 text-sm border-x border-red-100">${u.on} <span class="text-[9px] font-normal italic">días asistidos</span></td>
+                    <td class="p-5 text-center font-black text-red-600 bg-red-50 text-sm border-x border-red-100">${u.on} <span class="text-[9px] font-normal italic">días</span></td>
                     <td class="p-5 text-right font-black text-slate-600 text-sm">${s2t(u.sum)}</td>
                 </tr>
             `).join('');
 
-            // GRÁFICOS
+            // Gráficas
             Plotly.newPlot('chart_gerencias', [{
                 y: sortedGer.map(e => e[0]), x: sortedGer.map(e => (e[1].horas/3600).toFixed(1)), 
                 type: 'bar', orientation: 'h', marker: { color: '#ef4444' },
                 text: sortedGer.map(e => (e[1].horas/3600).toFixed(1) + "h"), textposition: 'auto'
-            }], { title: { text: 'GERENCIAS (ORDEN BAJA CARGA)', font: { family: 'Arial Black', size: 11 } }, margin: { l: 120, r: 20, t: 40, b: 40 } }, { responsive: true, displayModeBar: false });
+            }], { title: { text: 'GERENCIAS: MENOR CARGA', font: { family: 'Arial Black', size: 11 } }, margin: { l: 120, r: 20, t: 40, b: 40 } }, { responsive: true, displayModeBar: false });
 
             const valY = timeline.map(v => (v/3600).toFixed(1));
             Plotly.newPlot('chart_main', [{
                 x: fFilt.map(f => f.substring(0,5)), y: valY, mode: 'lines+markers+text',
                 text: valY, textposition: 'top center', line: { color: '#2563eb', width: 4 }
-            }], { title: { text: 'EVOLUCIÓN DIARIA DEL EQUIPO', font: { family: 'Arial Black', size: 11 } }, margin: { l: 40, r: 20, t: 40, b: 40 } }, { responsive: true, displayModeBar: false });
+            }], { title: { text: 'EVOLUCIÓN DE HORAS LOGUEO', font: { family: 'Arial Black', size: 11 } }, margin: { l: 40, r: 20, t: 40, b: 40 } }, { responsive: true, displayModeBar: false });
         }
 
         function descargarAlertas() {
             if(!alertasActuales.length) return alert("Sin alertas.");
-            const ws = XLSX.utils.json_to_sheet(alertasActuales.map(a => ({ Agente: a.ag, Gerencia: a.ger, Dias_Sin_Conexion: a.off, Horas_Totales: s2t(a.sum) })));
+            const ws = XLSX.utils.json_to_sheet(alertasActuales.map(a => ({ Agente: a.ag, Gerencia: a.ger, Dias_OFF: a.off, Horas: s2t(a.sum) })));
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Alertas");
-            XLSX.writeFile(wb, "Reporte_Alertas_GMT.xlsx");
+            XLSX.writeFile(wb, "GMT_Alertas_Criticas.xlsx");
         }
 
         ['sel_mes', 'sel_ger', 'dia_inicio', 'dia_fin'].forEach(id => {
