@@ -2,51 +2,52 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT AUDIT | Dashboard Consolidado</title>
+    <title>GMT AUDIT | Dashboard Blue Edition</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; margin: 1px; }
-        .spr-high { background-color: #2563eb; color: white; } /* Azul como en tu imagen */
-        .day-off { background-color: #fee2e2; color: #ef4444; border: 1px solid #fecaca; opacity: 0.6; }
+        .spr-high { background-color: #3b82f6; color: white; } /* Azul suave */
+        .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
         .sticky-thead th { position: sticky; top: 0; background-color: #f8fafc; z-index: 20; border-bottom: 2px solid #e2e8f0; }
-        .card-stat { border-left: 4px solid #64748b; transition: all 0.3s; background: white; }
-        .card-alert { border-left-color: #ef4444; }
-        .font-num { font-family: 'Courier New', Courier, monospace; }
+        .card-stat { border-left: 4px solid #3b82f6; transition: all 0.3s; background: white; }
+        .card-alert { border-left-color: #ef4444; background-color: #fffafb; }
+        /* Fondo degradado suave para el cuerpo */
+        body { background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%); min-height: 100vh; }
     </style>
 </head>
-<body class="bg-[#f0f2f5] p-4 font-sans text-slate-900">
+<body class="p-4 font-sans text-slate-900">
 
     <div class="max-w-[1600px] mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div class="bg-white/80 backdrop-blur-md p-6 rounded-3xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-4">
-                <div class="bg-[#1e293b] p-3 rounded-2xl text-white font-black italic text-xl shadow-lg">GMT</div>
+                <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl shadow-lg shadow-blue-200">GMT</div>
                 <div>
-                    <h1 class="text-xl font-black uppercase tracking-tighter text-slate-800">Auditoría <span class="text-blue-600">Performance</span></h1>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="status_file">Sincronizando con GitHub...</p>
+                    <h1 class="text-xl font-black uppercase tracking-tighter text-slate-800">Auditoría <span class="text-blue-600">Blue Performance</span></h1>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="status_file">Cargando datos desde el repositorio...</p>
                 </div>
             </div>
             
             <div class="flex flex-wrap items-center gap-3">
-                <div class="flex gap-4 mr-6 px-6 border-r border-l">
+                <div class="flex gap-4 mr-6 px-6 border-r border-l border-slate-100">
                     <div class="text-right">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Total Activo</p>
-                        <p class="text-xl font-black text-blue-700 leading-none" id="header_total_hrs">00:00</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Total Logueo</p>
+                        <p class="text-xl font-black text-blue-600 leading-none" id="header_total_hrs">00:00</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Alertas Críticas</p>
-                        <p class="text-xl font-black text-red-600 leading-none" id="header_alertas">0</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Alertas</p>
+                        <p class="text-xl font-black text-red-500 leading-none" id="header_alertas">0</p>
                     </div>
                 </div>
 
-                <div class="bg-slate-50 p-2 rounded-2xl border flex gap-2 items-center">
-                    <input type="number" id="dia_inicio" value="1" min="1" max="31" class="w-12 bg-white border rounded-lg text-[11px] font-bold p-1 text-center outline-none">
-                    <span class="text-[9px] font-black text-slate-400 uppercase">Al</span>
-                    <input type="number" id="dia_fin" value="31" min="1" max="31" class="w-12 bg-white border rounded-lg text-[11px] font-bold p-1 text-center outline-none">
+                <div class="bg-white p-2 rounded-2xl border flex gap-2 items-center shadow-sm">
+                    <input type="number" id="dia_inicio" value="1" min="1" max="31" class="w-10 text-[11px] font-bold text-center outline-none">
+                    <span class="text-[9px] font-black text-slate-300 uppercase">A</span>
+                    <input type="number" id="dia_fin" value="31" min="1" max="31" class="w-10 text-[11px] font-bold text-center outline-none">
                 </div>
-                <select id="sel_mes" class="bg-slate-900 text-white text-[11px] font-bold px-5 py-3 rounded-2xl border-none outline-none cursor-pointer"></select>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-5 py-3 rounded-2xl text-[11px] font-black uppercase shadow-lg hover:bg-blue-700 transition-all">🔄 Refrescar</button>
+                <select id="sel_mes" class="bg-blue-50 text-blue-700 text-[11px] font-bold px-5 py-3 rounded-2xl border border-blue-100 outline-none cursor-pointer"></select>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-5 py-3 rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">🔄 Sincronizar</button>
             </div>
         </div>
 
@@ -57,27 +58,27 @@
                 <div id="chart_main" style="height: 300px;"></div>
             </div>
             <div class="bg-white p-6 rounded-3xl border shadow-sm w-full">
-                <div id="chart_gerencias" style="height: 400px;"></div>
+                <div id="chart_gerencias" style="height: 450px;"></div>
             </div>
         </div>
 
         <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
-            <div class="p-6 bg-white border-b flex flex-col md:flex-row justify-between items-end gap-4">
+            <div class="p-6 bg-slate-50/50 border-b flex flex-col md:flex-row justify-between items-end gap-4">
                 <div class="flex flex-col gap-2 w-full max-w-md">
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Filtrar por Gerencia</label>
-                    <select id="sel_ger" class="bg-[#f8fafc] text-slate-700 text-[12px] font-black px-4 py-3 rounded-xl border outline-none cursor-pointer shadow-inner uppercase"></select>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Filtro de Gerencia (Incluye S/G)</label>
+                    <select id="sel_ger" class="bg-white text-slate-700 text-[12px] font-black px-4 py-3 rounded-xl border border-slate-200 outline-none cursor-pointer shadow-sm uppercase"></select>
                 </div>
                 
-                <div class="flex gap-8 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                <div class="flex gap-8 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                     <div class="text-center">
-                        <p class="text-[9px] font-black text-blue-400 uppercase">Ejecutivos</p>
-                        <p class="text-xl font-black text-blue-800" id="kpi_count_ejec">0</p>
+                        <p class="text-[9px] font-black text-slate-400 uppercase">Ejecutivos</p>
+                        <p class="text-xl font-black text-blue-600" id="kpi_count_ejec">0</p>
                     </div>
-                    <div class="text-center border-l border-blue-200 pl-8">
-                        <p class="text-[9px] font-black text-blue-400 uppercase">Horas Grupo</p>
-                        <p class="text-xl font-black text-blue-800" id="kpi_sum_hrs">0:00</p>
+                    <div class="text-center border-l border-slate-100 pl-8">
+                        <p class="text-[9px] font-black text-slate-400 uppercase">Horas Grupo</p>
+                        <p class="text-xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                     </div>
-                    <button onclick="descargarAlertas()" class="bg-[#d92d20] text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-700 transition-all shadow-md self-center ml-4">📥 Exportar Excel</button>
+                    <button onclick="descargarAlertas()" class="bg-blue-50 text-blue-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-100 transition-all self-center ml-4">📥 Excel</button>
                 </div>
             </div>
             
@@ -86,8 +87,8 @@
                     <thead class="sticky-thead bg-[#f8fafc] text-slate-400 font-black uppercase">
                         <tr>
                             <th class="p-5 w-1/4">Ejecutivo / Gerencia</th>
-                            <th class="p-5 text-center">Asistencia Diaria (Calendario)</th>
-                            <th class="p-5 text-center bg-red-50 text-red-600">Días Conectado</th>
+                            <th class="p-5 text-center">Calendario de Asistencia</th>
+                            <th class="p-5 text-center bg-blue-50 text-blue-600 border-x border-white">Días On</th>
                             <th class="p-5 text-right">Horas Totales</th>
                         </tr>
                     </thead>
@@ -104,13 +105,12 @@
         window.onload = cargarDesdeGitHub;
 
         async function cargarDesdeGitHub() {
-            document.getElementById('status_file').innerText = "⏳ DESCARGANDO DATOS...";
             try {
                 const response = await fetch(GITHUB_URL);
                 const csvText = await response.text();
                 procesarCSV(csvText);
             } catch (err) {
-                document.getElementById('status_file').innerText = "❌ ERROR DE CONEXIÓN";
+                document.getElementById('status_file').innerText = "❌ ERROR AL CARGAR";
             }
         }
 
@@ -155,10 +155,13 @@
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
             const mesIds = Object.keys(mesesDisp).sort();
             document.getElementById('sel_mes').innerHTML = mesIds.map(id => `<option value="${id}">${mesesDisp[id]}</option>`).join('');
-            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
+            
+            const gerenciasOrdenadas = [...setG].sort();
+            document.getElementById('sel_ger').innerHTML = '<option value="ALL">VISTA GLOBAL (INCLUYE SIN GERENCIA)</option>' + 
+                gerenciasOrdenadas.map(g => `<option value="${g}">${g}</option>`).join('');
             
             if(mesIds.length) document.getElementById('sel_mes').value = mesIds[mesIds.length - 1];
-            document.getElementById('status_file').innerText = "✅ ACTUALIZADO";
+            document.getElementById('status_file').innerText = "✅ DATOS ACTUALIZADOS";
             render();
         }
 
@@ -183,7 +186,7 @@
                     boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
                 });
 
-                if (sum === 0 && on === 0 && gerSel !== "ALL" && u.ger !== gerSel) return;
+                if (sum === 0 && on === 0) return;
                 
                 if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0, alertas: 0 };
                 statsGer[u.ger].horas += sum;
@@ -200,66 +203,73 @@
                 }
             });
 
-            // Actualizar KPI Header
             document.getElementById('header_total_hrs').innerText = s2t(totalGeneralS);
             document.getElementById('header_alertas').innerText = alertasActuales.length;
-
-            // Actualizar KPI Tabla (Filtro seleccionado)
-            const sumFiltrada = list.reduce((acc, curr) => acc + curr.sum, 0);
             document.getElementById('kpi_count_ejec').innerText = list.length;
-            document.getElementById('kpi_sum_hrs').innerText = s2t(sumFiltrada);
+            document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((acc, curr) => acc + curr.sum, 0));
 
-            // Orden de tabla: Menor asistencia primero
             list.sort((a,b) => a.on - b.on);
 
-            // Tarjetas ordenadas por menos horas
             const sortedGer = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
             document.getElementById('cards_container').innerHTML = sortedGer.map(([name, data]) => `
                 <div class="bg-white p-4 rounded-2xl border shadow-sm card-stat ${data.alertas > 3 ? 'card-alert' : ''}">
                     <p class="text-[8px] font-black text-slate-400 uppercase truncate">${name}</p>
-                    <h3 class="text-lg font-black text-slate-900">${s2t(data.horas)} <span class="text-[9px] text-blue-600">Hrs</span></h3>
-                    <div class="flex justify-between mt-2 border-t pt-2">
-                        <span class="text-[9px] font-bold text-slate-500">👤 ${data.ops} Ejecutivos</span>
-                        <span class="text-[9px] font-bold text-red-500">⚠️ ${data.alertas} Alt.</span>
+                    <h3 class="text-lg font-black text-slate-800">${s2t(data.horas)} <span class="text-[9px] text-blue-500">h</span></h3>
+                    <div class="flex justify-between mt-2 border-t border-slate-50 pt-2">
+                        <span class="text-[9px] font-bold text-slate-400">👤 ${data.ops}</span>
+                        <span class="text-[9px] font-bold ${data.alertas > 0 ? 'text-red-500' : 'text-blue-400'}">⚠️ ${data.alertas}</span>
                     </div>
                 </div>
             `).join('');
 
-            // Tabla
             document.getElementById('table_body').innerHTML = list.map(u => `
                 <tr>
-                    <td class="p-5"><p class="font-black text-slate-800 uppercase leading-none">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold uppercase mt-1">${u.ger}</p></td>
+                    <td class="p-5"><p class="font-black text-slate-700 uppercase leading-none">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold uppercase mt-1">${u.ger}</p></td>
                     <td class="p-5 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
-                    <td class="p-5 text-center font-black text-blue-700 bg-blue-50/50 text-sm border-x border-slate-100">${u.on} <span class="text-[9px] font-normal italic">días</span></td>
+                    <td class="p-5 text-center font-black text-blue-600 bg-blue-50/30 text-sm border-x border-white">${u.on}</td>
                     <td class="p-5 text-right font-black text-slate-600 text-sm">${s2t(u.sum)}</td>
                 </tr>
             `).join('');
 
-            // Gráficas
+            // GRÁFICA TENDENCIA CON ETIQUETAS
             Plotly.newPlot('chart_main', [{
                 x: fFilt.map(f => f.substring(0,5)), y: timeline.map(v => (v/3600).toFixed(1)), mode: 'lines+markers+text',
-                text: timeline.map(v => (v/3600).toFixed(0) + "h"), textposition: 'top center', 
-                line: { color: '#2563eb', width: 3 }, marker: { size: 6, color: '#1e293b' }
+                text: timeline.map(v => (v/3600).toFixed(1) + "h"), textposition: 'top center', 
+                textfont: { family: 'Arial Black', size: 9, color: '#3b82f6' },
+                line: { color: '#3b82f6', width: 3, shape: 'spline' }, 
+                marker: { size: 6, color: '#1e40af' }
             }], { 
-                title: { text: 'COMPORTAMIENTO DE HORAS POR DÍA (GLOBAL)', font: { family: 'Arial Black', size: 12 } },
-                margin: { l: 40, r: 20, t: 40, b: 40 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'
+                title: { text: 'EVOLUCIÓN DE HORAS POR DÍA', font: { family: 'Arial Black', size: 12, color: '#1e293b' } },
+                margin: { l: 40, r: 20, t: 50, b: 40 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+                xaxis: { gridcolor: '#f1f5f9' }, yaxis: { gridcolor: '#f1f5f9' }
             }, { responsive: true, displayModeBar: false });
 
+            // GRÁFICA BARRAS CON DEGRADADO AZUL Y ETIQUETAS
             Plotly.newPlot('chart_gerencias', [{
-                y: sortedGer.map(e => e[0]), x: sortedGer.map(e => (e[1].horas/3600).toFixed(1)), 
-                type: 'bar', orientation: 'h', marker: { color: '#334155' },
-                text: sortedGer.map(e => (e[1].horas/3600).toFixed(1) + "h"), textposition: 'auto'
+                y: sortedGer.map(e => e[0]), 
+                x: sortedGer.map(e => (e[1].horas/3600).toFixed(1)), 
+                type: 'bar', orientation: 'h', 
+                marker: {
+                    color: sortedGer.map((_, i) => `rgba(59, 130, 246, ${0.4 + (i / sortedGer.length) * 0.6})`),
+                    line: { color: '#3b82f6', width: 1 }
+                },
+                text: sortedGer.map(e => (e[1].horas/3600).toFixed(1) + " h"),
+                textposition: 'outside',
+                textfont: { family: 'Arial Black', size: 10, color: '#1e40af' }
             }], { 
-                title: { text: 'RESUMEN DE HORAS POR GERENCIA', font: { family: 'Arial Black', size: 12 } },
-                margin: { l: 150, r: 40, t: 50, b: 50 }, xaxis: { title: 'Horas Totales' }
+                title: { text: 'TOTAL HORAS POR GERENCIA', font: { family: 'Arial Black', size: 12, color: '#1e293b' } },
+                margin: { l: 160, r: 60, t: 50, b: 50 }, 
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+                xaxis: { title: 'Horas Acumuladas', gridcolor: '#f1f5f9' },
+                yaxis: { gridcolor: 'transparent' }
             }, { responsive: true, displayModeBar: false });
         }
 
         function descargarAlertas() {
-            if(!alertasActuales.length) return alert("No hay alertas.");
-            const ws = XLSX.utils.json_to_sheet(alertasActuales.map(a => ({ Agente: a.ag, Gerencia: a.ger, Dias_Desconectado: a.off, Horas_Acumuladas: s2t(a.sum) })));
+            if(!alertasActuales.length) return alert("Sin alertas.");
+            const ws = XLSX.utils.json_to_sheet(alertasActuales.map(a => ({ Agente: a.ag, Gerencia: a.ger, Dias_OFF: a.off, Horas: s2t(a.sum) })));
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Alertas");
-            XLSX.writeFile(wb, "GMT_Alertas_Auditoria.xlsx");
+            XLSX.writeFile(wb, "GMT_Auditoria_Blue.xlsx");
         }
 
         ['sel_mes', 'sel_ger', 'dia_inicio', 'dia_fin'].forEach(id => {
