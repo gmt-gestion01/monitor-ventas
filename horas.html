@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <title>GMT CONTROL | AUDITORÍA</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
-        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; }
+        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; transition: all 0.2s; cursor: help; }
         .spr-high { background-color: #2563eb; color: white; }
         .vic-high { background-color: #f97316; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
         .table-scroll { max-height: 75vh; overflow-y: auto; }
-        /* Estilo para el scroll */
         .table-scroll::-webkit-scrollbar { width: 8px; }
         .table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -23,26 +24,31 @@
                 <h1 class="text-2xl font-black text-slate-900 tracking-tighter">GMT <span class="text-blue-600">AUDITORÍA</span></h1>
                 <p id="status-text" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center md:text-left">Iniciando sistema...</p>
             </div>
+            
             <div class="flex flex-wrap justify-center gap-2">
-                <select id="filter_ger" onchange="render()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl outline-none focus:border-blue-500"></select>
-                <input type="text" id="search" oninput="render()" placeholder="BUSCAR ASESOR..." class="border-2 border-slate-200 text-xs px-4 py-2 rounded-xl outline-none w-48 focus:border-blue-500">
+                <select id="filter_ger" onchange="render()" class="bg-white border-2 border-slate-200 text-xs font-bold px-4 py-2 rounded-xl outline-none focus:border-blue-500 cursor-pointer"></select>
+                <input type="text" id="search" oninput="render()" placeholder="BUSCAR ASESOR..." class="border-2 border-slate-200 text-xs px-4 py-2 rounded-xl outline-none w-48 focus:border-blue-500 uppercase">
+                <button onclick="generarExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black px-4 py-2 rounded-xl transition-colors uppercase">Excel</button>
             </div>
         </div>
 
         <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             <div class="bg-slate-900 p-4 flex justify-between items-center">
-                <h2 class="text-white text-[10px] font-black uppercase tracking-widest">⚠️ Alertas de Conexión (Menor actividad primero)</h2>
+                <h2 class="text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <span class="animate-pulse">⚠️</span> Alertas de Conexión (Inactividad Crítica)
+                </h2>
                 <div id="date-range" class="text-blue-400 text-[9px] font-bold uppercase"></div>
             </div>
+            
             <div class="table-scroll">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
-                        <tr class="text-[10px] text-slate-400 font-black uppercase">
-                            <th class="p-4">Ejecutivo</th>
-                            <th class="p-4 text-center">Días Activos</th>
+                        <tr class="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
+                            <th class="p-4">Ejecutivo / Gerencia</th>
+                            <th class="p-4 text-center">Status Actividad</th>
                             <th class="p-4 text-center">Horas Totales</th>
-                            <th class="p-4">Gerencia / Campaña</th>
-                            <th class="p-4">Detalle de Conexión</th>
+                            <th class="p-4">Campaña</th>
+                            <th class="p-4 text-center">Auditoría Diaria (Calendario)</th>
                         </tr>
                     </thead>
                     <tbody id="t_body" class="divide-y divide-slate-100 text-[11px]">
@@ -51,20 +57,15 @@
             </div>
         </div>
 
-        <div id="debug-log" class="mt-4 p-4 bg-slate-800 text-green-400 font-mono text-[9px] rounded-lg hidden"></div>
     </div>
 
     <script>
+        // --- 2. ARQUITECTURA DE DATOS: VARIABLES GLOBALES ---
         let rawData = [];
         let dates = [];
         let dateStartIndex = 9;
 
-        function showLog(msg) {
-            const d = document.getElementById('debug-log');
-            d.classList.remove('hidden');
-            d.innerHTML += `> ${msg}<br>`;
-        }
-
+        // --- 2. LÓGICA DE TIEMPO: CONVERSORES ---
         const tToSec = (t) => {
             if (!t || t === "0" || t === "00:00:00" || t.includes('N/D') || t.trim() === "") return 0;
             const p = t.trim().split(':');
@@ -79,25 +80,24 @@
             return `${h}h ${m}m`;
         };
 
+        // --- 2. ARQUITECTURA DE DATOS: INGESTA Y PROCESAMIENTO DINÁMICO ---
         async function cargarDatos() {
             try {
                 const response = await fetch('data_02.csv?v=' + Date.now());
-                if (!response.ok) throw new Error("Archivo data_02.csv no encontrado");
+                if (!response.ok) throw new Error("CSV no hallado");
                 
                 const text = await response.text();
                 const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-                
                 const sep = lines[0].includes(';') ? ';' : ',';
                 const headers = lines[0].split(sep).map(h => h.trim());
                 
-                // Buscar dónde empiezan las fechas realmente (primera columna con '/')
+                // Identificación dinámica de columnas de fecha
                 dateStartIndex = headers.findIndex(h => h.includes('/'));
-                if (dateStartIndex === -1) dateStartIndex = 9;
-
-                // Extraer solo columnas que tengan formato de fecha
                 dates = headers.slice(dateStartIndex).filter(h => h.includes('/'));
+                
                 document.getElementById('date-range').innerText = `Periodo: ${dates[0]} - ${dates[dates.length-1]}`;
                 
+                // Agrupación por asesor (Integración Sprinklr + Vicidial)
                 const tempMap = {};
                 lines.slice(1).forEach(line => {
                     const c = line.split(sep).map(x => x.replace(/"/g, '').trim());
@@ -107,7 +107,6 @@
                     const nombre = c[1];
                     const gerencia = c[3] || "N/D";
                     const campana = c[4] || "N/D";
-                    // Extraer los datos diarios basándonos en el índice dinámico
                     const daily = c.slice(dateStartIndex, dateStartIndex + dates.length);
 
                     if (!tempMap[nombre]) {
@@ -118,20 +117,21 @@
 
                 rawData = Object.values(tempMap);
                 
+                // Llenar filtro de Gerencias
                 const gers = [...new Set(rawData.map(r => r.gerencia))].sort();
                 document.getElementById('filter_ger').innerHTML = '<option value="">GERENCIAS (TODAS)</option>' + 
                     gers.map(g => `<option value="${g}">${g}</option>`).join('');
 
-                document.getElementById('status-text').innerText = `CONEXIÓN ACTUALIZADA: ${rawData.length} ASESORES`;
+                document.getElementById('status-text').innerText = `SISTEMA ONLINE: ${rawData.length} REGISTROS`;
                 render();
 
             } catch (err) {
-                showLog("ERROR: " + err.message);
-                document.getElementById('status-text').innerText = "ERROR DE CARGA";
-                document.getElementById('status-text').style.color = "red";
+                document.getElementById('status-text').innerText = "ERROR EN BASE DE DATOS";
+                document.getElementById('status-text').classList.add('text-red-600');
             }
         }
 
+        // --- 3. COMPONENTES DEL TABLERO: MOTOR DE RENDERIZADO Y ALERTAS ---
         function render() {
             const filterGer = document.getElementById('filter_ger').value;
             const searchName = document.getElementById('search').value.toUpperCase();
@@ -142,7 +142,6 @@
                 let daysAct = 0;
                 let dailyMatrix = [];
 
-                // Recorrer cada fecha detectada
                 for (let i = 0; i < dates.length; i++) {
                     let daySec = 0;
                     let type = 'SPR';
@@ -160,33 +159,33 @@
                 return { ...u, totalSec, daysAct, dailyMatrix };
             });
 
-            // Filtros
+            // Aplicación de Filtros Multidimensionales
             processed = processed.filter(u => 
                 (!filterGer || u.gerencia === filterGer) && 
                 (!searchName || u.nombre.toUpperCase().includes(searchName))
             );
 
-            // ORDENAR POR ALERTAS: Los que menos días tienen van ARRIBA
+            // 3. SECCIÓN DE ALERTA: Ordenar por menor actividad primero (Gravedad)
             processed.sort((a, b) => a.daysAct - b.daysAct);
 
             tbody.innerHTML = processed.map(u => `
-                <tr class="hover:bg-blue-50/50 transition-colors">
+                <tr class="hover:bg-slate-50 transition-colors border-l-4 ${u.daysAct < 3 ? 'border-l-red-500' : 'border-l-transparent'}">
                     <td class="p-4">
-                        <div class="font-bold text-slate-800 uppercase leading-none">${u.nombre}</div>
-                        <div class="text-[9px] text-slate-400 mt-1 font-medium">${u.gerencia}</div>
+                        <div class="font-bold text-slate-800 uppercase leading-none text-[10px]">${u.nombre}</div>
+                        <div class="text-[9px] text-slate-400 mt-1 font-medium italic">${u.gerencia}</div>
                     </td>
                     <td class="p-4 text-center">
-                        <span class="px-3 py-1 rounded-lg font-black text-[10px] ${u.daysAct < 4 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">
-                            ${u.daysAct} DÍAS
+                        <span class="px-3 py-1 rounded-lg font-black text-[9px] uppercase ${u.daysAct < 4 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">
+                            ${u.daysAct} Días Activos
                         </span>
                     </td>
                     <td class="p-4 text-center">
-                        <div class="font-mono font-bold text-slate-600">${secToT(u.totalSec)}</div>
+                        <div class="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md inline-block text-[10px]">${secToT(u.totalSec)}</div>
                     </td>
                     <td class="p-4">
-                        <div class="text-[9px] font-bold text-slate-400 uppercase">${u.campana}</div>
+                        <div class="text-[9px] font-bold text-slate-500 uppercase">${u.campana}</div>
                     </td>
-                    <td class="p-4 flex gap-1 flex-wrap max-w-xs">
+                    <td class="p-4 flex gap-1 justify-center flex-wrap">
                         ${u.dailyMatrix.map(d => `
                             <div class="day-box ${d.sec > 0 ? (d.type === 'SPR' ? 'spr-high' : 'vic-high') : 'day-off'}" 
                                  title="${d.label}: ${secToT(d.sec)}">
@@ -196,6 +195,29 @@
                     </td>
                 </tr>
             `).join('');
+        }
+
+        // --- 4. HERRAMIENTAS DE CONTROL: EXPORTACIÓN ---
+        function generarExcel() {
+            const dataToExport = rawData.map(u => {
+                let sec = 0, act = 0;
+                dates.forEach((d, i) => {
+                    let dSec = 0; Object.values(u.systems).forEach(s => dSec += tToSec(s[i]));
+                    if(dSec > 0) act++; sec += dSec;
+                });
+                return {
+                    "EJECUTIVO": u.nombre,
+                    "GERENCIA": u.gerencia,
+                    "CAMPAÑA": u.campana,
+                    "HORAS TOTALES": secToT(sec),
+                    "DÍAS ACTIVOS": act,
+                    "INACTIVIDAD": dates.length - act
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
+            XLSX.writeFile(wb, `Auditoria_GMT.xlsx`);
         }
 
         window.onload = cargarDatos;
