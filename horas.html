@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT AUDIT | Sistema de Alertas</title>
+    <title>GMT AUDIT | Dashboard Final</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -21,14 +21,14 @@
         <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
                 <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl">GMT</div>
-                <h1 class="text-xl font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Performance</span></h1>
+                <h1 class="text-xl font-black uppercase tracking-tighter italic text-slate-800">Auditoría <span class="text-blue-600">Performance</span></h1>
             </div>
             <div class="flex gap-4 items-center">
                 <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none shadow-sm"></select>
                 <select id="sel_dia" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none shadow-sm">
                     <option value="ALL">TODOS LOS DÍAS</option>
                 </select>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase">Refrescar</button>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase hover:bg-blue-700 transition-colors">Actualizar</button>
             </div>
         </div>
 
@@ -37,18 +37,16 @@
         <div class="alert-zone p-6 mb-6">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div>
-                    <h3 class="text-red-600 font-black text-lg uppercase flex items-center gap-2">
-                        ⚠️ Panel de Alertas Criticas
-                    </h3>
-                    <p id="alert_text" class="text-red-500 font-bold text-xs uppercase">Cargando análisis de conexión...</p>
+                    <h3 class="text-red-600 font-black text-lg uppercase flex items-center gap-2">⚠️ Alertas de Baja Conexión</h3>
+                    <p id="alert_text" class="text-red-500 font-bold text-xs uppercase italic">Esperando datos...</p>
                 </div>
-                <button onclick="descargarAlertas()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-red-700">
+                <button onclick="descargarAlertas()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-red-800 transition-all">
                     Descargar Listado de Bajas
                 </button>
             </div>
         </div>
 
-        <div class="space-y-6 mb-6">
+        <div class="flex flex-col gap-6 mb-6">
             <div class="bg-white p-6 rounded-3xl border shadow-sm"><div id="chart_tendencia" style="height: 350px;"></div></div>
             <div class="bg-white p-6 rounded-3xl border shadow-sm"><div id="chart_gerencias" style="height: 450px;"></div></div>
         </div>
@@ -57,31 +55,32 @@
             <div class="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50 gap-4">
                 <div class="flex items-center gap-3">
                     <span class="text-[10px] font-black text-slate-400 uppercase">Filtrar por Gerente:</span>
-                    <select id="sel_ger" class="p-2 rounded-lg border font-bold text-xs uppercase outline-none bg-white min-w-[200px]"></select>
+                    <select id="sel_ger" class="p-2 rounded-lg border font-bold text-xs uppercase outline-none bg-white min-w-[200px] shadow-sm"></select>
                 </div>
                 <div class="text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase">Acumulado Visible</p>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase">Total Horas Visibles</p>
                     <p class="text-3xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                 </div>
             </div>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto max-h-[500px]">
                 <table class="w-full text-left text-[11px]">
-                    <thead class="bg-slate-100 text-slate-500 font-bold uppercase">
+                    <thead class="bg-slate-100 text-slate-500 font-bold uppercase sticky top-0 z-10">
                         <tr>
                             <th class="p-4">Ejecutivo</th>
                             <th class="p-4">Gerencia</th>
-                            <th class="p-4 text-center">Calendario</th>
+                            <th class="p-4 text-center">Asistencia</th>
                             <th class="p-4 text-right">Hrs Totales</th>
                         </tr>
                     </thead>
-                    <tbody id="table_body" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
+        // URL con cache bust para forzar carga de datos nuevos
+        const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv?t=" + new Date().getTime();
         let dataGlobal = {}, fechasGlobal = [], mesesDisp = {}, ejecutivosBajos = [];
 
         window.onload = cargarDesdeGitHub;
@@ -89,9 +88,13 @@
         async function cargarDesdeGitHub() {
             try {
                 const resp = await fetch(GITHUB_URL);
+                if (!resp.ok) throw new Error("Error al conectar con GitHub");
                 const texto = await resp.text();
                 procesarCSV(texto);
-            } catch (e) { console.error("Error al cargar datos"); }
+            } catch (e) { 
+                console.error(e);
+                alert("No se pudieron cargar los datos. Verifica la conexión.");
+            }
         }
 
         function t2s(t) {
@@ -107,18 +110,21 @@
 
         function procesarCSV(csv) {
             const lineas = csv.split(/\r?\n/).filter(l => l.trim().length > 10);
-            // Índices según tu archivo: 0:Agente, 1:Usuario, 2:Horas, 4:Gerencia, 7:Dia, 8:Mes
+            // Autodetectar separador (coma o punto y coma)
+            const sep = lineas[0].includes(';') ? ';' : ',';
+            
+            // Índices basados en tu archivo: 0:Agente, 1:Usuario, 2:Hrs, 4:Gerencia, 7:Dia, 8:Mes
             const iAg=0, iUs=1, iHr=2, iGe=4, iDi=7, iMe=8;
             
             dataGlobal = {}; fechasGlobal = []; mesesDisp = {}; 
             let setF = new Set(), setG = new Set();
 
             lineas.slice(1).forEach(l => {
-                const c = l.split(',').map(v => v.trim());
+                const c = l.split(sep).map(v => v.trim());
                 if(c.length < 8) return;
                 
                 let ger = (c[iGe] || "SIN GERENCIA").toUpperCase();
-                if(ger === "" || ger.includes("UNDEFINED")) ger = "SIN GERENCIA";
+                if(ger === "" || ger === "UNDEFINED") ger = "SIN GERENCIA";
                 
                 const us = c[iUs], fec = c[iDi], mes = c[iMe];
                 if(!us || !fec) return;
@@ -173,56 +179,66 @@
                     statsG[u.ger].n++;
                     
                     const obj = { ...u, sum, on, boxes };
-                    if(on < 3) ejecutivosBajos.push(obj);
+                    if(on < 3) ejecutivosBajos.push(obj); // Alerta si tiene menos de 3 días
                     if(ger === "ALL" || u.ger === ger) list.push(obj);
                 }
             });
 
-            // TARJETAS
+            // TARJETAS SUPERIORES
             const sG = Object.entries(statsG).sort((a,b) => b[1].h - a[1].h);
             document.getElementById('cards_container').innerHTML = sG.slice(0, 5).map(([n, d]) => `
                 <div class="p-4 card-stat">
-                    <p class="text-[9px] font-black text-slate-400 uppercase">${n}</p>
+                    <p class="text-[9px] font-black text-slate-400 uppercase truncate">${n}</p>
                     <h3 class="text-xl font-black text-slate-800">${s2t(d.h)}</h3>
-                    <p class="text-[9px] font-bold text-blue-600 uppercase">👥 ${d.n} Pers.</p>
+                    <p class="text-[9px] font-bold text-blue-600">👥 ${d.n} Usuarios</p>
                 </div>`).join('');
 
-            document.getElementById('alert_text').innerText = `Detección: ${ejecutivosBajos.length} ejecutivos con menos de 3 conexiones en el mes de ${mes}.`;
+            document.getElementById('alert_text').innerText = `Se detectaron ${ejecutivosBajos.length} ejecutivos con menos de 3 días de conexión en el periodo.`;
             document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a,b) => a + b.sum, 0));
 
-            // TABLA (ORDEN MENOR A MAYOR CONEXIÓN)
+            // TABLA (ORDENADA POR MENOS DÍAS DE ASISTENCIA)
             document.getElementById('table_body').innerHTML = list.sort((a,b) => a.on - b.on).map(u => `
                 <tr>
-                    <td class="p-4"><b>${u.ag}</b><br><span class="text-[9px] text-slate-400">${u.us}</span></td>
+                    <td class="p-4"><b>${u.ag}</b><br><span class="text-[9px] text-slate-400 font-mono">${u.us}</span></td>
                     <td class="p-4 font-bold text-slate-500 uppercase">${u.ger}</td>
                     <td class="p-4 flex flex-wrap justify-center gap-1">${u.boxes}</td>
-                    <td class="p-4 text-right font-black">${s2t(u.sum)}</td>
+                    <td class="p-4 text-right font-black text-slate-700">${s2t(u.sum)}</td>
                 </tr>`).join('');
 
-            // GRÁFICA TENDENCIA
-            const x = Object.keys(trend).map(f => f.split('/')[0]);
-            const y = Object.values(trend).map(s => (s/3600).toFixed(1));
+            // GRÁFICA TENDENCIA (LÍNEA AZUL)
+            const xVal = Object.keys(trend).map(f => f.split('/')[0]);
+            const yVal = Object.values(trend).map(s => (s/3600).toFixed(1));
             Plotly.newPlot('chart_tendencia', [{
-                x: x, y: y, type: 'scatter', mode: 'lines+markers+text', text: y, textposition: 'top center',
-                line: { color: '#2563eb', width: 3 }, fill: 'tozeroy'
-            }], { title: 'HORAS TOTALES POR DÍA', margin: {l:40, r:40, t:40, b:40} }, { responsive: true });
+                x: xVal, y: yVal, type: 'scatter', mode: 'lines+markers+text',
+                text: yVal, textposition: 'top center',
+                line: { color: '#2563eb', width: 3, shape: 'spline' },
+                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.1)'
+            }], { 
+                title: { text: 'TENDENCIA DIARIA (HORAS)', font: {size:12, family:'Arial Black'} },
+                margin: {l:40, r:40, t:40, b:40}
+            }, { responsive: true, displayModeBar: false });
 
-            // GRÁFICA BARRAS
-            const sGS = [...sG].reverse();
+            // GRÁFICA BARRAS HORIZONTALES
+            const sGSorted = [...sG].reverse();
             Plotly.newPlot('chart_gerencias', [{
-                y: sGS.map(e => e[0]), x: sGS.map(e => (e[1].h/3600).toFixed(1)),
+                y: sGSorted.map(e => e[0]), x: sGSorted.map(e => (e[1].h/3600).toFixed(1)),
                 type: 'bar', orientation: 'h', marker: { color: '#2563eb' },
-                text: sGS.map(e => (e[1].h/3600).toFixed(1)), textposition: 'outside'
-            }], { title: 'ACUMULADO POR GERENCIA', margin: {l:160, r:50, t:40, b:40} }, { responsive: true });
+                text: sGSorted.map(e => (e[1].h/3600).toFixed(1) + "h"), textposition: 'outside'
+            }], { 
+                title: { text: 'ACUMULADO POR GERENCIA', font: {size:12, family:'Arial Black'} },
+                margin: {l:160, r:50, t:40, b:40}
+            }, { responsive: true, displayModeBar: false });
         }
 
         function descargarAlertas() {
             let csv = "Agente,Usuario,Gerencia,Dias_Conectados\n";
-            ejecutivosBajos.forEach(e => csv += `"${e.ag}","${e.us}","${e.ger}",${e.on}\n`);
+            ejecutivosBajos.forEach(e => {
+                csv += `"${e.ag}","${e.us}","${e.ger}",${e.on}\n`;
+            });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = 'alertas_GMT.csv'; a.click();
+            a.href = url; a.download = 'alertas_GMT_baja_asistencia.csv'; a.click();
         }
 
         document.getElementById('sel_mes').addEventListener('change', () => { actualizarDias(); render(); });
