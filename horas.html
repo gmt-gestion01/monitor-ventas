@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT AUDIT | Control</title>
+    <title>GMT AUDIT | Performance</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,68 +11,78 @@
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
         .card-stat { border-left: 3px solid #2563eb; background: white; border-radius: 0.5rem; }
-        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; font-size: 14px; }
+        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
         
-        /* Scroll compacto para alertas */
-        .alert-scroll { max-height: 140px; overflow-y: auto; }
+        .alert-scroll { max-height: 160px; overflow-y: auto; }
         .alert-scroll::-webkit-scrollbar { width: 4px; }
-        .alert-scroll::-webkit-scrollbar-thumb { background: #fecdd3; border-radius: 10px; }
+        .alert-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
         .js-plotly-plot .plotly .nsewdrag, .js-plotly-plot .plotly .drag { pointer-events: none !important; }
     </style>
 </head>
 <body class="p-2 md:p-4 text-slate-800">
 
-    <div class="max-w-[1600px] mx-auto">
+    <div class="max-w-[1400px] mx-auto">
         <div class="bg-white p-3 rounded-xl shadow-sm border mb-3 flex flex-col gap-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <div class="bg-blue-600 px-2 py-0.5 rounded text-white font-black italic text-lg">GMT</div>
                     <h2 class="text-xs font-black uppercase tracking-tighter">Auditoría <span class="text-blue-600">Conexión</span></h2>
                 </div>
-                <button onclick="cargarDesdeGitHub()" class="text-blue-600 text-[10px] font-bold uppercase">🔄 Actualizar</button>
+                <button onclick="cargarDesdeGitHub()" class="text-blue-600 text-[10px] font-bold uppercase border border-blue-100 px-2 py-1 rounded">🔄 Actualizar</button>
             </div>
             
             <div class="grid grid-cols-2 gap-2">
-                <select id="sel_mes" class="bg-slate-50 border p-1.5 rounded-lg font-bold text-[11px] outline-none"></select>
-                <select id="sel_dia" class="bg-slate-50 border p-1.5 rounded-lg font-bold text-[11px] outline-none"><option value="ALL">DÍAS: TODOS</option></select>
+                <select id="sel_mes" class="bg-slate-50 border p-2 rounded-lg font-bold text-[11px] outline-none"></select>
+                <select id="sel_dia" class="bg-slate-50 border p-2 rounded-lg font-bold text-[11px] outline-none"><option value="ALL">DÍAS: TODOS</option></select>
             </div>
         </div>
 
         <div id="cards_container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-3"></div>
 
         <div class="bg-white border border-red-100 rounded-xl mb-3 shadow-sm overflow-hidden">
-            <div class="bg-red-50 px-3 py-1.5 flex justify-between items-center border-b border-red-100">
-                <h3 class="text-red-600 font-black text-[9px] uppercase tracking-widest">🚨 Alertas (+2 días OFF)</h3>
-                <span id="alert_count" class="text-red-600 text-[9px] font-black">0</span>
+            <div class="bg-red-50 px-3 py-2 flex justify-between items-center border-b border-red-100">
+                <h3 class="text-red-600 font-black text-[9px] uppercase tracking-widest">🚨 Alertas (+2 días sin conexión)</h3>
+                <button onclick="descargarAlertas()" class="bg-red-600 text-white text-[8px] px-2 py-1 rounded font-bold uppercase hover:bg-red-700">Descargar CSV</button>
             </div>
             <div class="alert-scroll">
                 <table class="w-full text-[10px]">
+                    <thead class="bg-white sticky top-0 text-slate-400 border-b">
+                        <tr>
+                            <th class="p-2 pl-4 text-left">AGENTE</th>
+                            <th class="p-2 text-center text-red-500 uppercase">Faltas</th>
+                            <th class="p-2 text-right pr-4">TOTAL HRS</th>
+                        </tr>
+                    </thead>
                     <tbody id="alert_table_body" class="divide-y divide-red-50"></tbody>
                 </table>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-            <div class="bg-white p-2 rounded-xl border shadow-sm"><div id="chart_tendencia" style="height: 220px;"></div></div>
-            <div class="bg-white p-2 rounded-xl border shadow-sm"><div id="chart_gerencias" style="height: 220px;"></div></div>
+        <div class="flex flex-col gap-3 mb-3">
+            <div class="bg-white p-2 rounded-xl border shadow-sm w-full">
+                <div id="chart_tendencia" style="height: 250px;"></div>
+            </div>
+            <div class="bg-white p-2 rounded-xl border shadow-sm w-full">
+                <div id="chart_gerencias" style="height: 350px;"></div>
+            </div>
         </div>
 
         <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
             <div class="p-3 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-2">
-                <select id="sel_ger" class="w-full md:w-[220px] p-1.5 border rounded-lg font-bold text-[11px] uppercase outline-none"></select>
-                <div class="flex gap-4 text-[10px]">
-                    <div class="text-center"><b>EJES:</b> <span id="kpi_count_eje">0</span></div>
-                    <div class="text-right"><b>HRS:</b> <span id="kpi_sum_hrs" class="text-blue-600 font-black">0:00</span></div>
+                <select id="sel_ger" class="w-full md:w-[250px] p-2 border rounded-lg font-bold text-[11px] uppercase outline-none"></select>
+                <div class="flex gap-4 text-[11px]">
+                    <div class="text-center"><b>EJES:</b> <span id="kpi_count_eje" class="font-black">0</span></div>
+                    <div class="text-right"><b>TOTAL:</b> <span id="kpi_sum_hrs" class="text-blue-600 font-black">0:00</span></div>
                 </div>
             </div>
             <div class="overflow-x-auto max-h-[400px]">
                 <table class="w-full text-[10px] text-left">
                     <thead class="bg-slate-100 text-slate-500 font-bold uppercase sticky top-0">
                         <tr>
-                            <th class="p-2 pl-3">Agente</th>
-                            <th class="p-2 text-center">Calendario</th>
-                            <th class="p-2 text-right pr-3">Total</th>
+                            <th class="p-2 pl-4">Agente</th>
+                            <th class="p-2 text-center">Actividad</th>
+                            <th class="p-2 text-right pr-4">Hrs</th>
                         </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100"></tbody>
@@ -83,7 +93,7 @@
 
     <script>
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
-        let rawData = [], fechasGlobal = [];
+        let rawData = [], fechasGlobal = [], alertasActuales = [];
 
         window.onload = cargarDesdeGitHub;
 
@@ -92,7 +102,7 @@
                 const resp = await fetch(GITHUB_URL + "?t=" + new Date().getTime());
                 const texto = await resp.text();
                 procesarCSV(texto);
-            } catch (e) { console.error("Error"); }
+            } catch (e) { console.error("Error cargando CSV"); }
         }
 
         function t2s(t) {
@@ -159,33 +169,60 @@
                     <p class="text-[7px] text-blue-500 font-bold">${d.n.size} Activos</p>
                 </div>`).join('');
 
-            // ALERTAS MINI
-            const bajos = Object.values(porEje).filter(e => (fActivas.length - e.dias.size) >= 2);
-            document.getElementById('alert_count').innerText = bajos.length;
-            document.getElementById('alert_table_body').innerHTML = bajos.map(e => `
-                <tr class="hover:bg-red-50/50">
-                    <td class="p-1.5 pl-3 font-bold text-slate-600">${e.agente.split(' ')[0]} ${e.agente.split(' ')[1] || ''}</td>
-                    <td class="p-1.5 text-center text-red-600 font-black">${e.dias.size}/${fActivas.length}d</td>
-                    <td class="p-1.5 text-right pr-3 font-mono">${s2t(e.total)}</td>
+            // ALERTAS (Días sin conexión)
+            alertasActuales = Object.values(porEje).filter(e => (fActivas.length - e.dias.size) >= 2);
+            document.getElementById('alert_table_body').innerHTML = alertasActuales.map(e => `
+                <tr class="hover:bg-red-50">
+                    <td class="p-2 pl-4 font-bold text-slate-600">${e.agente}</td>
+                    <td class="p-2 text-center text-red-600 font-black">${fActivas.length - e.dias.size} días OFF</td>
+                    <td class="p-2 text-right pr-4 font-mono">${s2t(e.total)}</td>
                 </tr>`).join('');
 
             // TABLA
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>a.total-b.total).map(u => {
                 let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
-                return `<tr>
-                    <td class="p-2 pl-3"><b>${u.agente}</b></td>
-                    <td class="p-2 flex justify-center gap-px">${bx}</td>
-                    <td class="p-2 text-right pr-3 font-black">${s2t(u.total)}</td>
-                </tr>`;
+                return `<tr><td class="p-2 pl-4"><b>${u.agente}</b></td><td class="p-2 flex justify-center gap-px">${bx}</td><td class="p-2 text-right pr-4 font-black">${s2t(u.total)}</td></tr>`;
             }).join('');
 
             document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
-            const lay = { dragmode: false, xaxis: { fixedrange: true, tickfont:{size:9} }, yaxis: { fixedrange: true }, margin: { l:30, r:10, t:30, b:30 } };
-            Plotly.newPlot('chart_tendencia', [{ x: Object.keys(tendencia).map(f=>f.split('/')[0]), y: Object.values(tendencia).map(s=>(s/3600).toFixed(1)), type: 'scatter', mode: 'lines+markers', line: { color: '#2563eb', width: 2 } }], { ...lay, title: {text:'HRS/DÍA', font:{size:10, weight:'bold'}} }, { responsive: true, displayModeBar: false });
+            const lay = { dragmode: false, xaxis: { fixedrange: true, tickfont:{size:9} }, yaxis: { fixedrange: true }, margin: { l:40, r:20, t:40, b:40 } };
+            
+            // TENDENCIA (CON ETIQUETAS)
+            Plotly.newPlot('chart_tendencia', [{
+                x: Object.keys(tendencia).map(f=>f.split('/')[0]), 
+                y: Object.values(tendencia).map(s=>(s/3600).toFixed(1)), 
+                type: 'scatter', mode: 'lines+markers+text', 
+                text: Object.values(tendencia).map(s=>(s/3600).toFixed(1)),
+                textposition: 'top center',
+                line: { color: '#2563eb', width: 3 },
+                marker: { size: 7 }
+            }], { ...lay, title: {text:'TENDENCIA HORAS DIARIAS', font:{size:11, weight:'bold'}} }, { responsive: true, displayModeBar: false });
+
+            // GERENCIAS (CON ETIQUETAS)
             const sG = Object.entries(statsG).sort((a,b)=>a[1].h-b[1].h);
-            Plotly.newPlot('chart_gerencias', [{ y: sG.map(e=>e[0]), x: sG.map(e=>(e[1].h/3600).toFixed(1)), type: 'bar', orientation: 'h', marker: { color: '#2563eb' } }], { ...lay, title: {text:'GERENCIA', font:{size:10, weight:'bold'}}, margin: {l:80, r:20, t:30, b:30} }, { responsive: true, displayModeBar: false });
+            Plotly.newPlot('chart_gerencias', [{ 
+                y: sG.map(e=>e[0]), 
+                x: sG.map(e=>(e[1].h/3600).toFixed(1)), 
+                type: 'bar', orientation: 'h', 
+                text: sG.map(e=>(e[1].h/3600).toFixed(1) + 'h'),
+                textposition: 'outside',
+                marker: { color: '#2563eb' } 
+            }], { ...lay, title: {text:'TOTAL HORAS POR GERENTE', font:{size:11, weight:'bold'}}, margin: {l:100, r:40, t:40, b:40} }, { responsive: true, displayModeBar: false });
+        }
+
+        function descargarAlertas() {
+            if(alertasActuales.length === 0) return alert("No hay alertas para descargar");
+            let csv = "Agente,Dias_Sin_Conexion,Horas_Totales\n";
+            alertasActuales.forEach(e => {
+                csv += `"${e.agente}",${fechasGlobal.filter(f => rawData.find(r => r.fecha === f && r.mes === document.getElementById('sel_mes').value)).length - e.dias.size},"${s2t(e.total)}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `alertas_gmt_${new Date().toLocaleDateString()}.csv`);
+            link.click();
         }
 
         document.getElementById('sel_mes').addEventListener('change', () => { actualizarDias(); render(); });
