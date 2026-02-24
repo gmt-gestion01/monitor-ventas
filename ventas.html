@@ -2,180 +2,225 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT | DASHBOARD ESTRATÉGICO</title>
+    <title>GMT | MONITOR ESTRATÉGICO</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #334155; }
         
-        /* Contenedor Principal de la Imagen */
-        .kpi-main-container {
-            background: white;
-            border-radius: 2.5rem;
-            overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Bloques Superiores */
-        .bg-ventas-brutas { background-color: #1a2e5a; } /* Azul oscuro */
-        .bg-meta-movistar { background-color: #00965e; } /* Verde Movistar */
-        .bg-meta-gmt { background-color: #c45511; }      /* Naranja/Marrón GMT */
-
-        .big-number { font-weight: 900; font-style: italic; line-height: 0.9; }
-        .label-top { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.8; }
+        /* Estilos de Impacto (Imagen 8a2442) */
+        .main-card { background: white; border-radius: 3.5rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1); }
+        .bg-blue-gmt { background-color: #1a2e5a; }   
+        .bg-green-gmt { background-color: #00965e; }  
+        .bg-orange-gmt { background-color: #c45511; } 
         
-        /* Punto decorativo de las metas */
-        .dot { height: 8px; width: 8px; background-color: #ff8fa3; border-radius: 50%; display: inline-block; margin-right: 8px; }
-
-        .filter-select {
-            background: white; border-radius: 0.75rem; padding: 0.5rem 1rem;
-            font-weight: 800; text-transform: uppercase; font-size: 0.7rem; border: 1px solid #e2e8f0;
-        }
+        .impact-number { font-weight: 900; font-style: italic; letter-spacing: -0.05em; line-height: 0.8; }
+        .label-header { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.8; }
+        
+        /* Estilos de tu código base */
+        .sup-card { transition: all 0.2s; border: 1px solid #e2e8f0; border-radius: 2.5rem; background: white; overflow: hidden; }
+        .stat-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
     </style>
 </head>
-<body class="p-6 md:p-12">
+<body class="p-4 md:p-8">
 
-    <div class="max-w-6xl mx-auto">
-        
-        <div class="flex justify-end gap-2 mb-6">
-            <select id="month_filter" onchange="updateDayFilter()" class="filter-select"></select>
-            <select id="day_filter" onchange="render()" class="filter-select"></select>
-        </div>
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
+            <div>
+                <h1 class="text-6xl font-black tracking-tighter uppercase italic py-2">
+                    <span style="background: linear-gradient(180deg, #ff9d42 0%, #ff6b00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">GMT</span>
+                    <span style="background: linear-gradient(180deg, #58a5ff 0%, #0056ce 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">VENTAS</span>
+                </h1>
+                <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.45em] mt-[-4px] pl-1">Sincronización Automática | 2026</p>
+            </div>
+            <div class="flex gap-3">
+                <label class="bg-blue-900 hover:bg-blue-800 px-8 py-3 rounded-xl text-xs font-black cursor-pointer transition-all uppercase text-white shadow-lg active:scale-95">
+                    📂 Cargar Archivo CSV
+                    <input type="file" id="local_file" accept=".csv" class="hidden">
+                </label>
+            </div>
+        </header>
 
-        <div class="kpi-main-container">
+        <div class="main-card mb-12">
             <div class="grid grid-cols-1 md:grid-cols-3 text-white">
-                
-                <div class="bg-ventas-brutas p-10 text-center">
-                    <p class="label-top mb-4">Ventas Brutas</p>
-                    <h2 id="val_ventas" class="big-number text-7xl italic">0</h2>
-                    <p id="val_ritmo" class="text-[10px] font-bold mt-4 opacity-60">RITMO: 0 / DÍA</p>
+                <div class="bg-blue-gmt p-12 text-center border-r border-white/5">
+                    <p class="label-header mb-4">Ventas Brutas</p>
+                    <h2 id="k_bruto" class="impact-number text-8xl">0</h2>
+                    <p id="k_ritmo" class="text-[10px] font-black mt-6 text-blue-300 uppercase">Ritmo: 0 / día</p>
                 </div>
-
-                <div class="bg-meta-movistar p-10 text-center relative border-x border-white/10">
-                    <p class="label-top mb-4">Meta Movistar (509)</p>
-                    <div class="flex items-center justify-center">
-                        <span class="dot"></span>
-                        <h2 id="val_meta_mov_perc" class="big-number text-7xl italic">0%</h2>
+                <div class="bg-green-gmt p-12 text-center border-r border-white/5">
+                    <p class="label-header mb-4">Meta Movistar (509)</p>
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="flag_509" class="w-3 h-3 bg-red-400 rounded-full"></span>
+                        <h2 id="k_cumplimiento_509" class="impact-number text-7xl">0%</h2>
                     </div>
-                    <h3 id="val_meta_mov_abs" class="text-3xl font-black mt-2">-0</h3>
+                    <h3 id="k_gap_509" class="text-4xl font-black mt-2 text-green-900/40">0</h3>
                 </div>
-
-                <div class="bg-meta-gmt p-10 text-center">
-                    <p class="label-top mb-4">Meta GMT (604)</p>
-                    <div class="flex items-center justify-center">
-                        <span class="dot" style="background-color: #fca5a5; opacity: 0.6;"></span>
-                        <h2 id="val_meta_gmt_perc" class="big-number text-7xl italic">0%</h2>
+                <div class="bg-orange-gmt p-12 text-center">
+                    <p class="label-header mb-4">Meta GMT (604)</p>
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="flag_604" class="w-3 h-3 bg-red-300 rounded-full opacity-60"></span>
+                        <h2 id="k_cumplimiento_604" class="impact-number text-7xl">0%</h2>
                     </div>
-                    <h3 id="val_meta_gmt_abs" class="text-3xl font-black mt-2">-0</h3>
+                    <h3 id="k_gap_604" class="text-4xl font-black mt-2 text-orange-950/30">0</h3>
                 </div>
-
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 py-10 px-6 gap-4 bg-white border-t border-slate-50">
-                
-                <div class="text-center border-r border-slate-100 last:border-0">
-                    <p class="text-[10px] font-black text-blue-600 uppercase mb-2">Activación (Altas)</p>
-                    <p class="text-5xl font-black text-slate-800 italic inline-block">
-                        <span id="val_alta">0</span>%
-                    </p>
-                    <span id="val_alta_ud" class="text-[10px] font-bold text-slate-400 ml-1">0 ud</span>
+            <div class="p-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 text-center bg-white">
+                <div class="md:border-r border-slate-100 last:border-0">
+                    <p class="stat-label text-blue-600 mb-2">Activación (Altas)</p>
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="alta_rel" class="impact-number text-5xl text-slate-800">0%</span>
+                        <span id="alta_abs" class="text-[10px] font-black text-slate-400">0 ud</span>
+                    </div>
                 </div>
-
-                <div class="text-center border-r border-slate-100 last:border-0">
-                    <p class="text-[10px] font-black text-orange-500 uppercase mb-2">Tráfico Real</p>
-                    <p class="text-5xl font-black text-slate-800 italic inline-block">
-                        <span id="val_traf">0</span>%
-                    </p>
-                    <span id="val_traf_ud" class="text-[10px] font-bold text-slate-400 ml-1">0 ud</span>
+                <div class="md:border-r border-slate-100 last:border-0">
+                    <p class="stat-label text-orange-500 mb-2">Tráfico Real</p>
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="trafico_rel" class="impact-number text-5xl text-slate-800">0%</span>
+                        <span id="trafico_abs" class="text-[10px] font-black text-slate-400">0 ud</span>
+                    </div>
                 </div>
-
-                <div class="text-center border-r border-slate-100 last:border-0">
-                    <p class="text-[10px] font-black text-blue-400 uppercase mb-2">Promedio ARPU</p>
-                    <p class="text-5xl font-black text-slate-800 italic">$<span id="val_arpu">0</span></p>
+                <div class="md:border-r border-slate-100 last:border-0">
+                    <p class="stat-label text-blue-400 mb-2">Promedio ARPU</p>
+                    <span id="k_arpu" class="impact-number text-5xl text-slate-800">$0</span>
                 </div>
-
                 <div class="text-center">
-                    <p class="text-[10px] font-black text-emerald-500 uppercase mb-2">Enrolamiento</p>
-                    <p class="text-5xl font-black text-slate-800 italic"><span id="val_enro">0</span>%</p>
+                    <p class="stat-label text-emerald-500 mb-2 italic">Enrolamiento</p>
+                    <span id="enrol_rel_main" class="impact-number text-5xl text-slate-800">0%</span>
                 </div>
-
             </div>
         </div>
 
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm">
+                <h4 class="stat-label mb-6 text-center italic">Tendencia Diaria</h4>
+                <div id="g_tendencia" style="height: 350px;"></div>
+            </div>
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm">
+                <h4 class="stat-label mb-6 text-center italic">Total por Gerente</h4>
+                <div id="g_gerente" style="height: 350px;"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-8">
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border-t-4 border-orange-500">
+                <h4 class="stat-label mb-8 text-center uppercase tracking-widest">Distribución de Recargas</h4>
+                <div id="recarga_list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+            </div>
+
+            <div class="mb-20">
+                <h4 class="stat-label mb-6 italic px-4 border-l-4 border-blue-900 ml-2">Monitor por Supervisor</h4>
+                <div id="supervisor_grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        let globalRawData = [];
-        const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/ventas.csv";
+        let globalData = [];
 
-        async function autoLoadCSV() {
-            try {
-                const res = await fetch(`${GITHUB_URL}?v=${Date.now()}`);
-                const text = await res.text();
-                const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+        document.getElementById('local_file').onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = evt => {
+                const lines = evt.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
                 const sep = lines[0].includes(';') ? ';' : ',';
                 
-                globalRawData = lines.slice(1).map(line => {
+                globalData = lines.slice(1).map(line => {
                     const c = line.split(sep).map(x => x.replace(/['"]+/g, '').trim());
-                    if(!c[1]) return null;
-                    return {
-                        fVenta: c[1],
-                        esAlta: c[3] && c[3].toUpperCase() !== "SIN ALTA" && c[3].toUpperCase() !== "NO",
-                        arpu: parseFloat(c[5]) || 0,
-                        esTrafico: c[6] && (c[6].toUpperCase().includes("TRAFICO") || c[6].toUpperCase() === "SI"),
-                        esEnrolado: c[8] && (c[8].toUpperCase().includes("ENROLADO") || c[8].toUpperCase() === "SI"),
-                        mes: (c[9] || "FEBRERO").toLowerCase()
+                    if (!c[0]) return null;
+                    
+                    let m = 0; 
+                    if(c[7] && c[7].toUpperCase() !== "SIN RECARGA") m = parseFloat(c[7].replace(/[^0-9.]/g, '')) || 0;
+                    
+                    return { 
+                        dn: c[0], fVenta: c[1], supervisor: c[2] || "S/S", 
+                        gerente: (c[10] || "SIN GERENCIA").toUpperCase(),
+                        esAlta: c[3] && c[3].toUpperCase() !== "SIN ALTA" && c[3].toUpperCase() !== "NO", 
+                        esTrafico: c[6] === "SI" || c[6] === "CON TRAFICO" || c[6] === "TRAFICO", 
+                        esEnrolado: c[8] === "SI" || c[8] === "ENROLADO", 
+                        recargaTxt: c[7] || "SIN RECARGA", recargaVal: m 
                     };
                 }).filter(d => d !== null);
+                render();
+            };
+            reader.readAsText(file);
+        };
 
-                const meses = [...new Set(globalRawData.map(d => d.mes))].sort();
-                document.getElementById('month_filter').innerHTML = meses.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-                updateDayFilter();
-            } catch (err) { console.error(err); }
-        }
-
-        function updateDayFilter() {
-            const selMes = document.getElementById('month_filter').value;
-            const days = [...new Set(globalRawData.filter(d => d.mes === selMes).map(d => d.fVenta))].sort();
-            document.getElementById('day_filter').innerHTML = '<option value="ALL">TODOS LOS DÍAS</option>' + days.map(d => `<option value="${d}">${d}</option>`).join('');
-            render();
+        function setStatus(total, metaUnit, dias, idFlag, idCumple, idGap) {
+            const obj = (dias || 1) * metaUnit;
+            const cumple = Math.round((total / obj) * 100) || 0;
+            const gap = total - obj;
+            document.getElementById(idCumple).innerText = cumple + "%";
+            document.getElementById(idGap).innerText = (gap >= 0 ? "+" : "") + gap;
+            document.getElementById(idFlag).style.backgroundColor = cumple >= 98 ? '#4ade80' : cumple < 89 ? '#f87171' : '#fbbf24';
         }
 
         function render() {
-            const selMes = document.getElementById('month_filter').value;
-            const selDia = document.getElementById('day_filter').value;
-            let data = globalRawData.filter(d => d.mes === selMes);
-            if(selDia !== "ALL") data = data.filter(d => d.fVenta === selDia);
-
-            const total = data.length;
-            const altas = data.filter(x => x.esAlta).length;
-            const trafico = data.filter(x => x.esTrafico).length;
-            const enrolado = data.filter(x => x.esEnrolado).length;
-            const sumArpu = data.reduce((acc, curr) => acc + curr.arpu, 0);
+            const total = globalData.length;
+            const dates = [...new Set(globalData.map(d => d.fVenta))].sort();
+            const dias = dates.length || 1;
             
-            // Fila Superior
-            document.getElementById('val_ventas').innerText = total;
-            const diasActivos = [...new Set(data.map(d => d.fVenta))].length || 1;
-            document.getElementById('val_ritmo').innerText = `RITMO: ${Math.round(total/diasActivos)} / DÍA`;
-            
-            // Metas (Valores de la imagen)
-            const metaMov = 509; const metaGmt = 604;
-            document.getElementById('val_meta_mov_perc').innerText = Math.round((total/metaMov)*100) + "%";
-            document.getElementById('val_meta_mov_abs').innerText = (total - metaMov);
-            document.getElementById('val_meta_gmt_perc').innerText = Math.round((total/metaGmt)*100) + "%";
-            document.getElementById('val_meta_gmt_abs').innerText = (total - metaGmt);
+            document.getElementById('k_bruto').innerText = total;
+            document.getElementById('k_ritmo').innerText = `Ritmo: ${Math.round(total/dias)} / día`;
+            setStatus(total, 509, dias, 'flag_509', 'k_cumplimiento_509', 'k_gap_509');
+            setStatus(total, 604, dias, 'flag_604', 'k_cumplimiento_604', 'k_gap_604');
 
-            // Fila Inferior
-            document.getElementById('val_alta').innerText = Math.round((altas/total)*100)||0;
-            document.getElementById('val_alta_ud').innerText = `${altas} ud`;
-            document.getElementById('val_traf').innerText = Math.round((trafico/total)*100)||0;
-            document.getElementById('val_traf_ud').innerText = `${trafico} ud`;
-            document.getElementById('val_arpu').innerText = Math.round(sumArpu/total)||0;
-            document.getElementById('val_enro').innerText = Math.round((enrolado/total)*100)||0;
+            document.getElementById('alta_rel').innerText = (total > 0 ? Math.round((globalData.filter(d => d.esAlta).length/total)*100) : 0) + "%";
+            document.getElementById('alta_abs').innerText = globalData.filter(d => d.esAlta).length + " ud";
+            document.getElementById('trafico_rel').innerText = (total > 0 ? Math.round((globalData.filter(d => d.esTrafico).length/total)*100) : 0) + "%";
+            document.getElementById('trafico_abs').innerText = globalData.filter(d => d.esTrafico).length + " ud";
+            
+            const recs = globalData.filter(d => d.recargaVal > 0);
+            document.getElementById('k_arpu').innerText = "$" + (recs.length > 0 ? Math.round(recs.reduce((s,d)=>s+d.recargaVal,0)/recs.length) : 0);
+            document.getElementById('enrol_rel_main').innerText = (total > 0 ? Math.round((globalData.filter(d => d.esEnrolado).length/total)*100) : 0) + "%";
+
+            // Gráfica de Tendencia
+            const counts = dates.map(dt => globalData.filter(d => d.fVenta === dt).length);
+            Plotly.newPlot('g_tendencia', [{
+                x: dates, y: counts, type: 'scatter', mode: 'lines+markers+text',
+                text: counts, textposition: 'top center', line: {color: '#1e3a8a', width: 3, shape: 'spline'}
+            }], { paper_bgcolor: 'rgba(0,0,0,0)', margin: {t:30, b:30, l:30, r:20} }, {responsive: true});
+
+            // Gráfica Gerente
+            const gers = [...new Set(globalData.map(d => d.gerente))];
+            const gerData = gers.map(g => ({name: g, val: globalData.filter(x => x.gerente === g).length})).sort((a,b) => a.val - b.val);
+            Plotly.newPlot('g_gerente', [{
+                y: gerData.map(d => d.name), x: gerData.map(d => d.val), type: 'bar', orientation: 'h',
+                marker: {color: '#2563eb'}, text: gerData.map(d => d.val), textposition: 'auto'
+            }], { paper_bgcolor: 'rgba(0,0,0,0)', margin: {t:10, b:10, l:100, r:20} }, {responsive: true});
+
+            // Recargas
+            const recMap = {};
+            globalData.forEach(d => { recMap[d.recargaTxt] = (recMap[d.recargaTxt] || 0) + 1; });
+            document.getElementById('recarga_list').innerHTML = Object.entries(recMap).sort((a,b)=>b[1]-a[1]).map(([l,v]) => `
+                <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center border border-slate-100">
+                    <div><p class="text-[10px] font-black uppercase text-slate-400 mb-1 leading-none">${l}</p>
+                    <p class="text-[12px] font-bold text-blue-500">${total>0?Math.round((v/total)*100):0}%</p></div>
+                    <p class="text-lg font-black text-slate-800">${v}</p>
+                </div>`).join('');
+
+            // Supervisores
+            const supers = [...new Set(globalData.map(d => d.supervisor))].sort();
+            document.getElementById('supervisor_grid').innerHTML = supers.map(s => {
+                const dSup = globalData.filter(x => x.supervisor === s);
+                const v = dSup.length;
+                return `
+                    <div class="sup-card p-6">
+                        <p class="text-[11px] font-black text-blue-900 border-b pb-2 mb-4 uppercase italic tracking-tighter">${s}</p>
+                        <div class="text-center mb-4">
+                            <p class="text-3xl font-black text-slate-800">${v}</p>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="bg-blue-50 p-2 rounded-xl text-center"><p class="stat-label text-[6px]">Alta</p><p class="text-[11px] font-black">${Math.round((dSup.filter(x=>x.esAlta).length/v)*100)||0}%</p></div>
+                            <div class="bg-orange-50 p-2 rounded-xl text-center"><p class="stat-label text-[6px]">Traf</p><p class="text-[11px] font-black">${Math.round((dSup.filter(x=>x.esTrafico).length/v)*100)||0}%</p></div>
+                            <div class="bg-emerald-50 p-2 rounded-xl text-center"><p class="stat-label text-[6px]">Enrol</p><p class="text-[11px] font-black">${Math.round((dSup.filter(x=>x.esEnrolado).length/v)*100)||0}%</p></div>
+                        </div>
+                    </div>`;
+            }).join('');
         }
-
-        window.onload = autoLoadCSV;
     </script>
 </body>
 </html>
