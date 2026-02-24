@@ -34,11 +34,19 @@
                         <option value="ALL">TODOS</option>
                     </select>
                 </div>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 mt-3 rounded-xl font-black text-[11px] uppercase">Actualizar</button>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 mt-3 rounded-xl font-black text-[11px] uppercase shadow-lg hover:bg-blue-700 transition-all">Actualizar Datos</button>
             </div>
         </div>
 
         <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"></div>
+
+        <div class="bg-red-50 p-4 rounded-2xl border border-red-100 mb-6 flex justify-between items-center">
+            <div>
+                <h3 class="text-red-800 font-black text-sm uppercase">Resumen de Alertas (Baja Conexión)</h3>
+                <p class="text-red-600 text-[10px] font-bold uppercase" id="alert_text">Cargando alertas...</p>
+            </div>
+            <button onclick="descargarAlertas()" class="bg-red-600 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase shadow-sm hover:bg-red-700">Descargar Reporte Alertas</button>
+        </div>
 
         <div class="flex flex-col gap-6 mb-6">
             <div class="bg-white p-6 rounded-3xl border shadow-sm">
@@ -50,10 +58,13 @@
         </div>
 
         <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
-            <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
-                <h2 class="text-sm font-black uppercase text-slate-700 italic">Detalle de Conexión y Ausentismo</h2>
+            <div class="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-4">
+                <div class="flex items-center gap-4 w-full md:w-auto">
+                    <span class="text-[10px] font-black text-slate-400 uppercase">Filtrar Detalle:</span>
+                    <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase outline-none w-full md:w-64 bg-white shadow-sm"></select>
+                </div>
                 <div class="text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Horas Acumuladas</p>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Horas Visibles</p>
                     <p class="text-3xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                 </div>
             </div>
@@ -63,8 +74,8 @@
                         <tr>
                             <th class="p-5">Ejecutivo</th>
                             <th class="p-5">Gerencia</th>
-                            <th class="p-5 text-center">Días de Conexión</th>
-                            <th class="p-5 text-right">Total Horas</th>
+                            <th class="p-5 text-center">Asistencia Mensual</th>
+                            <th class="p-5 text-right">Horas</th>
                         </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
@@ -75,16 +86,17 @@
 
     <script>
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
-        let dataGlobal = {}, fechasGlobal = [], mesesDisp = {};
+        let dataGlobal = {}, fechasGlobal = [], mesesDisp = {}, ejecutivosBajos = [];
 
         window.onload = cargarDesdeGitHub;
 
         async function cargarDesdeGitHub() {
             try {
                 const response = await fetch(GITHUB_URL);
+                if(!response.ok) throw new Error("No se pudo conectar a la liga.");
                 const csvText = await response.text();
                 procesarCSV(csvText);
-            } catch (err) { console.error("Error crítico"); }
+            } catch (err) { alert(err.message); }
         }
 
         function t2s(t) {
@@ -103,8 +115,7 @@
             const sep = lineas[0].includes(';') ? ';' : ',';
             const iAg = 0, iUs = 1, iHr = 2, iGe = 4, iDi = 7, iMe = 8;
 
-            dataGlobal = {}; fechasGlobal = []; let setF = new Set(); 
-            mesesDisp = {};
+            dataGlobal = {}; fechasGlobal = []; mesesDisp = {}; let setF = new Set(), setG = new Set();
 
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
@@ -114,13 +125,18 @@
                 
                 const us = col[iUs], fec = col[iDi], mesId = col[iMe];
                 setF.add(fec);
+                setG.add(ger);
                 if(mesId) mesesDisp[mesId.toLowerCase()] = mesId.toLowerCase();
                 if (!dataGlobal[us]) dataGlobal[us] = { ag: col[iAg], us, ger, logs: {} };
                 dataGlobal[us].logs[fec] = (dataGlobal[us].logs[fec] || 0) + t2s(col[iHr]);
             });
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
+            
             document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + 
+                [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
+
             actualizarSelectorDias();
             render();
         }
@@ -128,15 +144,17 @@
         function actualizarSelectorDias() {
             const mesSel = document.getElementById('sel_mes').value;
             const diasMes = fechasGlobal.filter(f => f.toLowerCase().includes(mesSel));
-            document.getElementById('sel_dia').innerHTML = '<option value="ALL">TODOS</option>' + 
+            document.getElementById('sel_dia').innerHTML = '<option value="ALL">TODOS LOS DÍAS</option>' + 
                 diasMes.map(f => `<option value="${f}">${f.split('/')[0]}</option>`).join('');
         }
 
         function render() {
             const mesSel = document.getElementById('sel_mes').value;
             const diaSel = document.getElementById('sel_dia').value;
+            const gerSel = document.getElementById('sel_ger').value;
             
             let list = [], statsGer = {}, tendencia = {};
+            ejecutivosBajos = [];
             fechasGlobal.forEach(f => { if(f.toLowerCase().includes(mesSel)) tendencia[f] = 0; });
 
             Object.values(dataGlobal).forEach(u => {
@@ -157,32 +175,29 @@
                     if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
                     statsGer[u.ger].horas += sum;
                     statsGer[u.ger].ops++;
-                    list.push({ ...u, sum, diasConect, boxes });
+                    
+                    const item = { ...u, sum, diasConect, boxes };
+                    if(diasConect < 3) ejecutivosBajos.push(item);
+                    
+                    if(gerSel === "ALL" || u.ger === gerSel) {
+                        list.push(item);
+                    }
                 }
             });
 
-            // TARJETAS (GERENCIA + ALERTA)
+            // TARJETAS
             const sGerArr = Object.entries(statsGer).sort((a,b) => b[1].horas - a[1].horas);
-            const bajos = list.filter(e => e.diasConect < 3).length;
-
-            let cardsHtml = sGerArr.slice(0, 4).map(([name, data]) => `
+            document.getElementById('cards_container').innerHTML = sGerArr.slice(0, 5).map(([name, data]) => `
                 <div class="p-4 card-stat">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
                     <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)}</h3>
                     <p class="text-[9px] font-bold text-blue-600 uppercase">👥 ${data.ops} Ejecutivos</p>
                 </div>`).join('');
-            
-            cardsHtml += `
-                <div class="p-4 card-alert">
-                    <p class="text-[9px] font-black text-red-500 uppercase">Alertas Conexión</p>
-                    <h3 class="text-xl font-black text-red-600">${bajos}</h3>
-                    <p class="text-[9px] font-bold text-red-400 uppercase">Ejecutivos &lt; 3 días</p>
-                </div>`;
-            
-            document.getElementById('cards_container').innerHTML = cardsHtml;
+
+            document.getElementById('alert_text').innerText = `Hay ${ejecutivosBajos.length} ejecutivos con menos de 3 días de conexión en el mes.`;
             document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a, b) => a + b.sum, 0));
 
-            // TABLA ORDENADA (MENOS DÍAS PRIMERO)
+            // TABLA (ORDENADA POR MENOS DÍAS)
             document.getElementById('table_body').innerHTML = list.sort((a,b)=>a.diasConect - b.diasConect).map(u => `
                 <tr>
                     <td class="p-4"><b>${u.ag}</b><br><span class="text-[9px] text-slate-400 font-mono">${u.us}</span></td>
@@ -191,7 +206,7 @@
                     <td class="p-4 text-right font-black text-slate-700">${s2t(u.sum)}</td>
                 </tr>`).join('');
 
-            // GRÁFICA TENDENCIA (ARRIBA) CON ETIQUETAS
+            // GRÁFICAS
             const xT = Object.keys(tendencia).map(f => f.split('/')[0]);
             const yT = Object.values(tendencia).map(s => (s/3600).toFixed(1));
             Plotly.newPlot('chart_tendencia', [{
@@ -204,7 +219,6 @@
                 margin: {l:40, r:40, t:40, b:40}, xaxis: {title: 'Día del Mes'}, yaxis: {title: 'Horas'}
             }, { responsive: true, displayModeBar: false });
 
-            // GRÁFICA GERENCIAS (ABAJO)
             const sGerSorted = [...sGerArr].reverse();
             Plotly.newPlot('chart_gerencias', [{
                 y: sGerSorted.map(e => e[0]), x: sGerSorted.map(e => (e[1].horas/3600).toFixed(1)),
@@ -216,8 +230,25 @@
             }, { responsive: true, displayModeBar: false });
         }
 
+        function descargarAlertas() {
+            let csv = "Agente,Usuario,Gerencia,Dias Conectados\n";
+            ejecutivosBajos.forEach(e => {
+                csv += `"${e.ag}","${e.us}","${e.ger}",${e.diasConect}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'alertas_baja_conexion.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
         document.getElementById('sel_mes').addEventListener('change', () => { actualizarSelectorDias(); render(); });
         document.getElementById('sel_dia').addEventListener('change', render);
+        document.getElementById('sel_ger').addEventListener('change', render);
     </script>
 </body>
 </html>
