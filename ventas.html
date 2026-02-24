@@ -24,21 +24,15 @@
     <div class="max-w-7xl mx-auto">
         <header class="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
             <div class="text-center lg:text-left">
-                <h1 class="text-6xl font-black tracking-tighter uppercase italic py-2" 
-                    style="filter: drop-shadow(0px 10px 8px rgba(0,0,0,0.15));">
+                <h1 class="text-6xl font-black tracking-tighter uppercase italic py-2">
                     <span style="background: linear-gradient(180deg, #ff9d42 0%, #ff6b00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 1px 1px 0px #b45309, 2px 2px 0px #92400e; display: inline-block;">GMT</span>
                     <span style="background: linear-gradient(180deg, #58a5ff 0%, #0056ce 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 1px 1px 0px #1e40af, 2px 2px 0px #1e3a8a; display: inline-block; margin-left: 2px;">PREPAGO</span>
                 </h1>
-                <p class="text-slate-400 font-bold text-[11px] uppercase tracking-[0.45em] mt-[-4px] pl-1">
-                    Sincronización Automática | 2026
-                </p>
+                <p class="text-slate-400 font-bold text-[11px] uppercase tracking-[0.45em] mt-[-4px] pl-1">Sincronización Automática | 2026</p>
             </div>
-            <div id="status_cloud" class="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-                <span class="relative flex h-3 w-3">
-                    <span id="ping_anim" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span id="ping_static" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span id="fetch_msg" class="text-[10px] font-black uppercase text-slate-500">Conectado a GitHub</span>
+            <div id="status_box" class="flex items-center gap-2 bg-white px-4 py-2 rounded-full border shadow-sm">
+                <div id="status_led" class="h-3 w-3 rounded-full bg-slate-300"></div>
+                <span id="status_text" class="text-[10px] font-black uppercase text-slate-500">Cargando...</span>
             </div>
         </header>
 
@@ -72,180 +66,164 @@
             </div>
 
             <div class="p-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 text-center bg-white">
-                <div class="border-r border-slate-100">
-                    <p class="stat-label text-blue-600 mb-2">Activación (Altas)</p>
-                    <div class="flex items-baseline justify-center gap-2">
-                        <span id="alta_rel" class="text-5xl font-black text-slate-800 tracking-tighter">0%</span>
-                        <span id="alta_abs" class="text-[11px] font-bold text-slate-400">0 ud</span>
-                    </div>
-                </div>
-                <div class="md:border-r border-slate-100">
-                    <p class="stat-label text-orange-500 mb-2">Tráfico Real</p>
-                    <div class="flex items-baseline justify-center gap-2">
-                        <span id="trafico_rel" class="text-5xl font-black text-slate-800 tracking-tighter">0%</span>
-                        <span id="trafico_abs" class="text-[11px] font-bold text-slate-400">0 ud</span>
-                    </div>
-                </div>
-                <div class="border-r border-slate-100">
-                    <p class="stat-label text-blue-400 mb-2">Promedio ARPU</p>
-                    <div class="flex items-baseline justify-center gap-2">
-                        <span id="k_arpu" class="text-5xl font-black text-slate-800 tracking-tighter">$0</span>
-                    </div>
-                </div>
-                <div>
-                    <p class="stat-label text-emerald-500 mb-2 italic">Enrolamiento</p>
-                    <div class="flex items-baseline justify-center gap-2">
-                        <span id="enrol_rel_main" class="text-5xl font-black text-slate-800 tracking-tighter">0%</span>
-                    </div>
-                </div>
+                <div><p class="stat-label text-blue-600">Alta</p><h3 id="alta_rel" class="text-4xl font-black">0%</h3><p id="alta_abs" class="text-[10px] text-slate-400">0 ud</p></div>
+                <div><p class="stat-label text-orange-500">Tráfico</p><h3 id="trafico_rel" class="text-4xl font-black">0%</h3><p id="trafico_abs" class="text-[10px] text-slate-400">0 ud</p></div>
+                <div><p class="stat-label text-blue-400">ARPU</p><h3 id="k_arpu" class="text-4xl font-black">$0</h3></div>
+                <div><p class="stat-label text-emerald-500 italic">Enrolado</p><h3 id="enrol_rel_main" class="text-4xl font-black">0%</h3></div>
             </div>
         </div>
 
         <div class="glass-card p-8 rounded-[2.5rem] mb-8">
-            <h4 class="stat-label mb-6 italic text-center text-slate-600 uppercase">Ventas Reales vs Metas</h4>
-            <div id="g_tendencia" style="height: 400px; width: 100%;"></div>
+            <h4 class="stat-label mb-6 text-center text-slate-600 uppercase italic">Ventas Diarias vs Objetivos</h4>
+            <div id="g_tendencia" style="height: 350px;"></div>
         </div>
 
-        <div class="glass-card rounded-[2.5rem] p-8 border-t-4 border-orange-500 mb-12">
-            <h4 class="stat-label mb-8 italic text-center text-slate-800 border-b pb-2 uppercase tracking-widest">Distribución de Recargas</h4>
+        <div id="recarga_section" class="glass-card rounded-[2.5rem] p-8 border-t-4 border-orange-500 mb-12">
+            <h4 class="stat-label mb-8 text-center uppercase tracking-widest">Resumen de Recargas</h4>
             <div id="recarga_list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
         </div>
 
         <div class="mb-20">
-            <h4 class="stat-label mb-6 italic px-4 border-l-4 border-blue-800 ml-2 uppercase text-slate-700">Monitor por Supervisor</h4>
+            <h4 class="stat-label mb-6 italic px-4 border-l-4 border-blue-800 ml-2 uppercase text-slate-700">Eficiencia por Supervisor</h4>
             <div id="supervisor_grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
         </div>
     </div>
 
     <script>
-        let globalData = [];
         const CSV_URL = 'https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/ventas.csv';
+        let globalData = [];
 
-        // Función para cargar desde GitHub y guardar en LocalStorage
-        async function fetchVentas() {
-            const fetchMsg = document.getElementById('fetch_msg');
-            const pingAnim = document.getElementById('ping_anim');
-            const pingStatic = document.getElementById('ping_static');
+        async function initData() {
+            const led = document.getElementById('status_led');
+            const statusText = document.getElementById('status_text');
 
             try {
-                const response = await fetch(CSV_URL);
-                if (!response.ok) throw new Error('Network error');
+                // Forzar la recarga del archivo sin caché del navegador
+                const response = await fetch(`${CSV_URL}?nocache=${new Date().getTime()}`);
+                if (!response.ok) throw new Error('Error al conectar con GitHub');
                 
                 const csvText = await response.text();
-                processCSV(csvText);
-                
-                // Guardar en LocalStorage para respaldo
-                localStorage.setItem('gmt_ventas_cache', csvText);
-                fetchMsg.innerText = "Sincronizado";
-            } catch (error) {
-                console.error('Error cargando CSV:', error);
-                fetchMsg.innerText = "Error - Usando Cache";
-                pingAnim.classList.replace('bg-emerald-400', 'bg-red-400');
-                pingStatic.classList.replace('bg-emerald-500', 'bg-red-500');
-                
-                // Cargar desde LocalStorage si falla la red
-                const cached = localStorage.getItem('gmt_ventas_cache');
-                if (cached) processCSV(cached);
+                if (csvText.length < 10) throw new Error('Archivo vacío');
+
+                localStorage.setItem('gmt_ventas_local', csvText);
+                parseAndRender(csvText);
+
+                led.className = "h-3 w-3 rounded-full bg-emerald-500 animate-pulse";
+                statusText.innerText = "Sincronizado (GitHub)";
+
+            } catch (err) {
+                console.warn("Error GitHub:", err);
+                const local = localStorage.getItem('gmt_ventas_local');
+                if (local) {
+                    parseAndRender(local);
+                    led.className = "h-3 w-3 rounded-full bg-amber-500";
+                    statusText.innerText = "Modo Offline (Cache)";
+                } else {
+                    led.className = "h-3 w-3 rounded-full bg-red-500";
+                    statusText.innerText = "Error de Conexión";
+                }
             }
         }
 
-        function processCSV(text) {
-            const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+        function parseAndRender(csv) {
+            const lines = csv.split(/\r?\n/).filter(l => l.trim().length > 0);
             const sep = lines[0].includes(';') ? ';' : ',';
             
             globalData = lines.slice(1).map(line => {
                 const c = line.split(sep).map(x => x.replace(/['"]+/g, '').trim());
-                if (!c[0] || c.length < 3) return null;
+                if (!c[0]) return null;
                 
-                let m = 0; 
-                if(c[7] && c[7].toUpperCase() !== "SIN RECARGA") m = parseFloat(c[7].replace(/[^0-9.]/g, '')) || 0;
-                
-                const valAlta = c[3] ? c[3].toUpperCase() : "";
-                const esAlta = valAlta !== "" && valAlta !== "SIN ALTA" && valAlta !== "NO";
-                const valTraf = c[6] ? c[6].toUpperCase() : "";
-                const esTrafico = valTraf === "SI" || valTraf === "CON TRAFICO" || valTraf === "TRAFICO";
-                const valEnrol = c[8] ? c[8].toUpperCase() : "";
-                const esEnrolado = valEnrol === "SI" || valEnrol === "ENROLADO";
-                
-                return { dn: c[0], fVenta: c[1], supervisor: c[2] || "S/S", esAlta, esTrafico, esEnrolado, recargaTxt: c[7] || "SIN RECARGA", recargaVal: m };
+                let recValue = 0;
+                if(c[7] && !c[7].toUpperCase().includes("SIN")) {
+                    recValue = parseFloat(c[7].replace(/[^0-9.]/g, '')) || 0;
+                }
+
+                return {
+                    dn: c[0], fVenta: c[1], supervisor: c[2] || "S/S",
+                    esAlta: c[3] && !c[3].toUpperCase().includes("SIN") && c[3].toUpperCase() !== "NO",
+                    esTrafico: c[6] === "SI" || c[6] === "CON TRAFICO" || c[6] === "TRAFICO",
+                    esEnrolado: c[8] === "SI" || c[8] === "ENROLADO",
+                    recargaTxt: c[7] || "SIN RECARGA",
+                    recargaVal: recValue
+                };
             }).filter(d => d !== null);
+
+            renderDashboard();
+        }
+
+        function setKPI(total, meta, dias, idFlag, idPct, idGap) {
+            const target = dias * meta;
+            const pct = Math.round((total / target) * 100) || 0;
+            const gap = total - target;
             
-            render();
-        }
-
-        function setStatus(total, metaUnit, dias, idFlag, idCumple, idGap) {
-            const obj = (dias || 1) * metaUnit;
-            const cumple = Math.round((total / obj) * 100) || 0;
-            const gap = total - obj;
-            document.getElementById(idCumple).innerText = cumple + "%";
+            document.getElementById(idPct).innerText = pct + "%";
             document.getElementById(idGap).innerText = (gap >= 0 ? "+" : "") + gap;
-            document.getElementById(idFlag).style.backgroundColor = cumple >= 98 ? '#4ade80' : cumple < 89 ? '#f87171' : '#fbbf24';
+            document.getElementById(idFlag).style.backgroundColor = pct >= 98 ? '#4ade80' : pct < 89 ? '#f87171' : '#fbbf24';
         }
 
-        function render() {
+        function renderDashboard() {
             const total = globalData.length;
             const dates = [...new Set(globalData.map(d => d.fVenta))].sort();
             const dias = dates.length || 1;
-            
+
+            // Bloque Superior
             document.getElementById('k_bruto').innerText = total;
             document.getElementById('k_ritmo').innerText = `Ritmo: ${Math.round(total/dias)} / día`;
-            setStatus(total, 509, dias, 'flag_509', 'k_cumplimiento_509', 'k_gap_509');
-            setStatus(total, 604, dias, 'flag_604', 'k_cumplimiento_604', 'k_gap_604');
+            setKPI(total, 509, dias, 'flag_509', 'k_cumplimiento_509', 'k_gap_509');
+            setKPI(total, 604, dias, 'flag_604', 'k_cumplimiento_604', 'k_gap_604');
 
-            document.getElementById('alta_rel').innerText = (total > 0 ? Math.round((globalData.filter(d => d.esAlta).length/total)*100) : 0) + "%";
-            document.getElementById('alta_abs').innerText = globalData.filter(d => d.esAlta).length + " ud";
-            document.getElementById('trafico_rel').innerText = (total > 0 ? Math.round((globalData.filter(d => d.esTrafico).length/total)*100) : 0) + "%";
-            document.getElementById('trafico_abs').innerText = globalData.filter(d => d.esTrafico).length + " ud";
-            
+            // Sub-detalles
+            const altas = globalData.filter(d => d.esAlta).length;
+            const trafico = globalData.filter(d => d.esTrafico).length;
+            const enrol = globalData.filter(d => d.esEnrolado).length;
+
+            document.getElementById('alta_rel').innerText = Math.round((altas/total)*100) + "%";
+            document.getElementById('alta_abs').innerText = altas + " ud";
+            document.getElementById('trafico_rel').innerText = Math.round((trafico/total)*100) + "%";
+            document.getElementById('trafico_abs').innerText = trafico + " ud";
+            document.getElementById('enrol_rel_main').innerText = Math.round((enrol/total)*100) + "%";
+
             const recs = globalData.filter(d => d.recargaVal > 0);
-            document.getElementById('k_arpu').innerText = "$" + (recs.length > 0 ? Math.round(recs.reduce((s,d)=>s+d.recargaVal,0)/recs.length) : 0);
-            document.getElementById('enrol_rel_main').innerText = (total > 0 ? Math.round((globalData.filter(d => d.esEnrolado).length/total)*100) : 0) + "%";
+            const arpu = recs.length > 0 ? Math.round(recs.reduce((s,d)=>s+d.recargaVal,0)/recs.length) : 0;
+            document.getElementById('k_arpu').innerText = "$" + arpu;
 
-            // GRÁFICA SPLINE
+            // Gráfica de Líneas
             const counts = dates.map(dt => globalData.filter(d => d.fVenta === dt).length);
             Plotly.newPlot('g_tendencia', [
-                { x: dates, y: counts, name: 'Reales', type: 'scatter', mode: 'lines+markers+text', text: counts, textposition: 'top center', line: {color: '#1e3a8a', width: 3, shape: 'spline'} },
+                { x: dates, y: counts, name: 'Real', type: 'scatter', mode: 'lines+markers+text', text: counts, textposition: 'top center', line: {color: '#1e3a8a', width: 3, shape: 'spline'} },
                 { x: dates, y: dates.map(() => 604), name: 'Meta GMT', line: {color: '#f97316', dash: 'dash'} },
                 { x: dates, y: dates.map(() => 509), name: 'Meta Movistar', line: {color: '#10b981', dash: 'dash'} }
-            ], { paper_bgcolor: 'rgba(0,0,0,0)', margin: {t:30, b:30, l:40, r:20} });
+            ], { paper_bgcolor: 'rgba(0,0,0,0)', margin: {t:20, b:40, l:40, r:20} }, {responsive: true, displayModeBar: false});
 
-            // RECARGAS
-            const recMap = {};
-            globalData.forEach(d => { recMap[d.recargaTxt] = (recMap[d.recargaTxt] || 0) + 1; });
-            document.getElementById('recarga_list').innerHTML = Object.entries(recMap).sort((a,b)=>b[1]-a[1]).map(([l,v]) => `
+            // Recargas
+            const rMap = {};
+            globalData.forEach(d => { rMap[d.recargaTxt] = (rMap[d.recargaTxt] || 0) + 1; });
+            document.getElementById('recarga_list').innerHTML = Object.entries(rMap).sort((a,b)=>b[1]-a[1]).map(([l,v]) => `
                 <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center border border-slate-100">
-                    <div><p class="text-[10px] font-black uppercase text-slate-400 mb-1 leading-none">${l}</p>
-                    <p class="text-[12px] font-bold text-blue-500">${total>0?Math.round((v/total)*100):0}%</p></div>
-                    <p class="text-lg font-black text-slate-800">${v}</p>
+                    <div><p class="text-[9px] font-black uppercase text-slate-400 mb-1">${l}</p>
+                    <p class="text-xs font-bold text-blue-500">${Math.round((v/total)*100)}%</p></div>
+                    <p class="text-xl font-black text-slate-800">${v}</p>
                 </div>`).join('');
 
-            // SUPERVISORES
-            const supers = [...new Set(globalData.map(d => d.supervisor))].sort();
-            document.getElementById('supervisor_grid').innerHTML = supers.map(s => {
-                const dSup = globalData.filter(x => x.supervisor === s);
-                const v = dSup.length;
-                const vRel = total > 0 ? Math.round((v / total) * 100) : 0;
+            // Grid Supervisores
+            const sups = [...new Set(globalData.map(d => d.supervisor))].sort();
+            document.getElementById('supervisor_grid').innerHTML = sups.map(s => {
+                const ds = globalData.filter(x => x.supervisor === s);
+                const n = ds.length;
                 return `
                     <div class="sup-card p-6">
-                        <p class="text-[11px] font-black text-blue-900 border-b pb-2 mb-4 uppercase italic tracking-tighter">${s}</p>
-                        <div class="text-center mb-4">
-                            <p class="stat-label text-[8px]">Ventas</p>
-                            <div class="flex items-baseline justify-center gap-2">
-                                <p class="text-3xl font-black text-slate-800">${v}</p>
-                                <p class="text-sm font-bold text-blue-500 italic">(${vRel}%)</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div class="bg-blue-50 p-2 rounded-xl text-center"><p class="stat-label text-[6px] text-blue-500">Alta</p><p class="text-[11px] font-black">${Math.round((dSup.filter(x=>x.esAlta).length/v)*100)||0}%</p></div>
-                            <div class="bg-orange-50 p-2 rounded-xl text-center"><p class="stat-label text-[6px] text-orange-500">Traf</p><p class="text-[11px] font-black">${Math.round((dSup.filter(x=>x.esTrafico).length/v)*100)||0}%</p></div>
-                            <div class="bg-emerald-50 p-2 rounded-xl text-center"><p class="stat-label text-[6px] text-emerald-500">Enrol</p><p class="text-[11px] font-black">${Math.round((dSup.filter(x=>x.esEnrolado).length/v)*100)||0}%</p></div>
+                        <p class="text-[11px] font-black text-blue-900 border-b pb-2 mb-4 uppercase italic">${s}</p>
+                        <p class="text-3xl font-black text-slate-800 text-center mb-4">${n}</p>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="bg-blue-50 p-2 rounded-xl"><p class="text-[7px] uppercase font-bold text-blue-400">Alta</p><p class="text-xs font-black">${Math.round((ds.filter(x=>x.esAlta).length/n)*100)}%</p></div>
+                            <div class="bg-orange-50 p-2 rounded-xl"><p class="text-[7px] uppercase font-bold text-orange-400">Traf</p><p class="text-xs font-black">${Math.round((ds.filter(x=>x.esTrafico).length/n)*100)}%</p></div>
+                            <div class="bg-emerald-50 p-2 rounded-xl"><p class="text-[7px] uppercase font-bold text-emerald-400">Enrol</p><p class="text-xs font-black">${Math.round((ds.filter(x=>x.esEnrolado).length/n)*100)}%</p></div>
                         </div>
                     </div>`;
             }).join('');
         }
 
-        // Ejecutar al cargar la página
-        window.onload = fetchVentas;
+        window.onload = initData;
     </script>
 </body>
 </html>
