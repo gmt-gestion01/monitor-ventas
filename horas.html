@@ -2,70 +2,45 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT AUDIT | Solución Final</title>
+    <title>GMT AUDIT | Enfoque Data Real</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
-        .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transition: transform 0.2s; }
-        .card-stat:hover { transform: translateY(-3px); }
-        body { background-color: #f8fafc; color: #1e293b; }
+        .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        body { background-color: #f8fafc; }
     </style>
 </head>
 <body class="p-4">
 
     <div class="max-w-[1600px] mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex justify-between items-center">
             <div class="flex items-center gap-4">
                 <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl">GMT</div>
-                <div>
-                    <h1 class="text-xl font-black uppercase tracking-tighter">Auditoría <span class="text-blue-600">Performance</span></h1>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase" id="status_file">Sincronizando...</p>
-                </div>
+                <h1 class="text-xl font-black uppercase">Auditoría <span class="text-blue-600">Performance</span></h1>
             </div>
-            
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="px-6 border-r text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase">Total Logueo</p>
-                    <p class="text-2xl font-black text-blue-600" id="header_total_hrs">0:00</p>
-                </div>
-                <div class="bg-slate-100 p-2 rounded-xl flex gap-2 border">
-                    <input type="number" id="dia_inicio" value="1" class="w-10 text-center font-bold bg-transparent outline-none">
-                    <span class="text-slate-300 font-bold">/</span>
-                    <input type="number" id="dia_fin" value="31" class="w-10 text-center font-bold bg-transparent outline-none">
-                </div>
-                <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm shadow-sm outline-none"></select>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase hover:bg-blue-700 transition-colors">Actualizar</button>
+            <div class="flex gap-4 items-center">
+                <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm"></select>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase">Actualizar</button>
             </div>
         </div>
 
-        <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"></div>
+        <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"></div>
 
         <div class="grid grid-cols-1 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-3xl border shadow-sm">
-                <div id="chart_main" style="height: 300px;"></div>
-            </div>
             <div class="bg-white p-6 rounded-3xl border shadow-sm">
                 <div id="chart_gerencias" style="height: 450px;"></div>
             </div>
         </div>
 
         <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
-            <div class="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-4">
-                <div class="flex flex-col gap-1 w-full max-w-xs">
-                    <label class="text-[10px] font-black text-slate-400 uppercase italic">Seleccionar Gerencia:</label>
-                    <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase outline-none bg-white shadow-sm"></select>
-                </div>
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
+                <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase outline-none w-64"></select>
                 <div class="flex gap-10">
                     <div class="text-center">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Ejecutivos Activos</p>
-                        <p class="text-2xl font-black text-blue-600" id="kpi_count_ejec">0</p>
-                    </div>
-                    <div class="text-center border-l pl-10">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Horas Acumuladas</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Horas Grupo</p>
                         <p class="text-2xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                     </div>
                 </div>
@@ -74,9 +49,9 @@
                 <table class="w-full text-left text-[11px]">
                     <thead class="sticky top-0 bg-white border-b z-10 text-slate-400 font-bold uppercase">
                         <tr>
-                            <th class="p-5">Agente / Líder</th>
-                            <th class="p-5 text-center">Calendario Mensual</th>
-                            <th class="p-5 text-center bg-blue-50 text-blue-600">Días On</th>
+                            <th class="p-5">Agente</th>
+                            <th class="p-5">Gerencia (Col E)</th>
+                            <th class="p-5 text-center">Calendario</th>
                             <th class="p-5 text-right">H. Totales</th>
                         </tr>
                     </thead>
@@ -97,7 +72,7 @@
                 const response = await fetch(GITHUB_URL);
                 const csvText = await response.text();
                 procesarCSV(csvText);
-            } catch (err) { document.getElementById('status_file').innerText = "❌ ERROR CARGA"; }
+            } catch (err) { console.error("Error al cargar"); }
         }
 
         function t2s(t) {
@@ -116,131 +91,105 @@
             const sep = lineas[0].includes(';') ? ';' : ',';
             const cab = lineas[0].split(sep).map(h => h.trim().toUpperCase());
             
-            const iAg = cab.indexOf("AGENTE"), iHr = cab.indexOf("HORAS LOGUEO"),
-                  iDi = cab.indexOf("DIA"), iMe = cab.indexOf("MES"),
-                  iGe = cab.indexOf("GERENCIA"), iEs = cab.indexOf("ESTATUS");
+            // Según tu archivo: Columna 0: Agente, Columna 2: Horas, Columna 4: GERENCIA, Columna 7: DIA (07/02/2026), Columna 8: MES
+            const iAg = 0, iHr = 2, iGe = 4, iDi = 7, iMe = 8;
 
             dataGlobal = {}; fechasGlobal = []; let setF = new Set(), setG = new Set();
 
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
-                if (col[iEs]?.toUpperCase() !== "ACTIVO") return;
                 
-                // LÓGICA DE DETECCIÓN PARA SIN GERENCIA
+                // LÓGICA REFORZADA PARA "SIN GERENCIA"
                 let gerRaw = col[iGe];
-                let ger = (gerRaw && gerRaw.length > 1 && gerRaw.toLowerCase() !== "undefined") ? gerRaw.toUpperCase() : "SIN GERENCIA";
+                let ger = (gerRaw && gerRaw !== "" && gerRaw.toUpperCase() !== "UNDEFINED") ? gerRaw.toUpperCase() : "SIN GERENCIA";
                 
-                const ag = col[iAg], fec = col[iDi], mesId = fec.split('/')[1];
-                setF.add(fec); setG.add(ger);
-                if(mesId) mesesDisp[mesId] = col[iMe] || "MES";
+                const ag = col[iAg], fec = col[iDi], mesId = col[iMe];
+                if(!ag || !fec) return;
+
+                setF.add(fec); 
+                setG.add(ger);
+                if(mesId) mesesDisp[mesId] = mesId;
 
                 if (!dataGlobal[ag]) dataGlobal[ag] = { ag, ger, logs: {} };
                 dataGlobal[ag].logs[fec] = (dataGlobal[ag].logs[fec] || 0) + t2s(col[iHr]);
             });
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-            
-            // SELECTOR DE GERENCIA (INCLUYE SIN GERENCIA)
             const sortedGer = [...setG].sort();
+            
             document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + 
                 sortedGer.map(g => `<option value="${g}">${g}</option>`).join('');
             
-            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).sort().map(id => `<option value="${id}">${mesesDisp[id]}</option>`).join('');
+            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             
-            document.getElementById('status_file').innerText = "✅ DATOS SINCRONIZADOS";
             render();
         }
 
         function render() {
             const mesSel = document.getElementById('sel_mes').value;
             const gerSel = document.getElementById('sel_ger').value;
-            const dIni = parseInt(document.getElementById('dia_inicio').value);
-            const dFin = parseInt(document.getElementById('dia_fin').value);
+            const fFilt = fechasGlobal.filter(f => dataGlobal[Object.keys(dataGlobal)[0]].logs.hasOwnProperty(f) || f.includes(mesSel)); // Simplificado para el ejemplo
 
-            const fFilt = fechasGlobal.filter(f => {
-                const p = f.split('/'); return p[1] === mesSel && parseInt(p[0]) >= dIni && parseInt(p[0]) <= dFin;
-            });
-
-            let list = [], timeline = fFilt.map(() => 0), statsGer = {}, totalGeneralS = 0;
+            let list = [], statsGer = {};
 
             Object.values(dataGlobal).forEach(u => {
                 let sum = 0, on = 0, boxes = "";
-                fFilt.forEach((f, i) => {
-                    const s = u.logs[f] || 0; sum += s; timeline[i] += s;
+                fechasGlobal.forEach(f => {
+                    const s = u.logs[f] || 0; 
+                    sum += s;
                     if(s > 0) on++;
                     boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
                 });
 
-                if (sum === 0 && on === 0) return;
-                
-                // Agrupación por gerencia para tarjetas
+                if (sum === 0) return;
                 if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
                 statsGer[u.ger].horas += sum;
                 statsGer[u.ger].ops++;
-                totalGeneralS += sum;
 
                 if (gerSel === "ALL" || u.ger === gerSel) {
                     list.push({ ...u, sum, on, boxes });
                 }
             });
 
-            document.getElementById('header_total_hrs').innerText = s2t(totalGeneralS);
-            document.getElementById('kpi_count_ejec').innerText = list.length;
             document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a, b) => a + b.sum, 0));
 
-            // TARJETAS (AQUÍ APARECEN TODAS)
+            // TARJETAS
             const sGerArr = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
             document.getElementById('cards_container').innerHTML = sGerArr.map(([name, data]) => `
                 <div class="p-5 card-stat">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
-                    <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)} <span class="text-xs text-blue-500 font-bold">h</span></h3>
-                    <p class="text-[10px] font-bold text-slate-500 mt-2">👤 ${data.ops} Agentes</p>
+                    <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)} <span class="text-xs text-blue-500">h</span></h3>
                 </div>
             `).join('');
 
             // TABLA
-            list.sort((a,b) => a.on - b.on);
             document.getElementById('table_body').innerHTML = list.map(u => `
                 <tr>
-                    <td class="p-4"><p class="font-black text-slate-700 uppercase leading-none">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold mt-1">${u.ger}</p></td>
+                    <td class="p-4 font-bold text-slate-700">${u.ag}</td>
+                    <td class="p-4 text-slate-500 font-bold">${u.ger}</td>
                     <td class="p-4 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
-                    <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${u.on} <span class="text-[9px] font-normal italic">días</span></td>
-                    <td class="p-4 text-right font-black text-slate-600">${s2t(u.sum)}</td>
+                    <td class="p-4 text-right font-black text-slate-700">${s2t(u.sum)}</td>
                 </tr>
             `).join('');
 
-            // GRÁFICA TENDENCIA
-            Plotly.newPlot('chart_main', [{
-                x: fFilt.map(f => f.substring(0,5)), y: timeline.map(v => (v/3600).toFixed(1)),
-                mode: 'lines+markers+text', text: timeline.map(v => (v/3600).toFixed(1)),
-                textposition: 'top center', line: { color: '#2563eb', width: 4, shape: 'spline' },
-                marker: { size: 8, color: '#1e3a8a' }
-            }], { 
-                title: { text: 'LOGUEO DIARIO (HORAS)', font: { size: 14, color: '#1e293b' } },
-                margin: {t:50, b:40, l:40, r:20}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'
-            }, {responsive:true});
-
-            // GRÁFICA GERENCIAS (CON ETIQUETAS FIJAS Y DEGRADADO)
+            // GRÁFICA BARRAS CON ETIQUETAS Y DEGRADADO
             Plotly.newPlot('chart_gerencias', [{
-                y: sGerArr.map(e => e[0]), x: sGerArr.map(e => (e[1].horas/3600).toFixed(0)),
+                y: sGerArr.map(e => e[0]), x: sGerArr.map(e => (e[1].horas/3600).toFixed(1)),
                 type: 'bar', orientation: 'h',
                 marker: {
                     color: sGerArr.map((_, i) => `rgba(37, 99, 235, ${0.4 + (i / sGerArr.length) * 0.6})`),
                     line: { color: '#1e3a8a', width: 1 }
                 },
-                text: sGerArr.map(e => (e[1].horas/3600).toFixed(0) + " h"),
+                text: sGerArr.map(e => (e[1].horas/3600).toFixed(1) + " h"),
                 texttemplate: '%{text}', textposition: 'outside', cliponaxis: false
             }], { 
-                title: { text: 'HORAS POR GERENCIA', font: { size: 14, color: '#1e293b' } },
-                margin: {l:160, r:60, t:50, b:50},
-                xaxis: { title: 'Horas' },
-                yaxis: { automargin: true }
+                title: { text: 'TOTAL HORAS POR GERENCIA (COL E)', font: { family: 'Arial Black' } },
+                margin: {l:150, r:80, t:50, b:50}
             }, {responsive:true});
         }
 
-        ['sel_mes', 'sel_ger', 'dia_inicio', 'dia_fin'].forEach(id => {
-            document.getElementById(id).addEventListener('change', render);
-        });
+        document.getElementById('sel_mes').addEventListener('change', render);
+        document.getElementById('sel_ger').addEventListener('change', render);
     </script>
 </body>
 </html>
