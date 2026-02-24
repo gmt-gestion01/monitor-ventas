@@ -2,81 +2,68 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT AUDIT | NIP Integrated</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMT AUDIT | Dashboard Consolidado</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
-        .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .nip-tag { background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; }
-        body { background-color: #f8fafc; color: #1e293b; }
+        .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card-alert { border-left: 5px solid #ef4444; background: #fef2f2; border-radius: 1rem; }
+        body { background-color: #f8fafc; }
     </style>
 </head>
 <body class="p-4">
 
     <div class="max-w-[1600px] mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
                 <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl">GMT</div>
-                <div>
-                    <h1 class="text-xl font-black uppercase tracking-tighter">Auditoría <span class="text-blue-600">Performance</span></h1>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase" id="status_file">Sincronizando...</p>
-                </div>
+                <h1 class="text-xl font-black uppercase tracking-tighter text-slate-800">Auditoría <span class="text-blue-600">Performance</span></h1>
             </div>
-            
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="bg-white px-4 py-2 rounded-xl border shadow-sm">
-                    <input type="text" id="search_nip" placeholder="🔍 Buscar por NIP o Nombre..." class="text-xs font-bold outline-none w-48">
+            <div class="flex gap-4 items-center">
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-bold text-slate-400 ml-1 uppercase">Mes</span>
+                    <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none shadow-sm min-w-[110px]"></select>
                 </div>
-                <div class="bg-slate-100 p-2 rounded-xl flex gap-2 border">
-                    <input type="number" id="dia_inicio" value="1" class="w-10 text-center font-bold bg-transparent outline-none">
-                    <span class="text-slate-300 font-bold">/</span>
-                    <input type="number" id="dia_fin" value="31" class="w-10 text-center font-bold bg-transparent outline-none">
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-bold text-slate-400 ml-1 uppercase">Día</span>
+                    <select id="sel_dia" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none shadow-sm min-w-[80px]">
+                        <option value="ALL">TODOS</option>
+                    </select>
                 </div>
-                <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm shadow-sm outline-none"></select>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase hover:bg-blue-700">Actualizar</button>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 mt-3 rounded-xl font-black text-[11px] uppercase">Actualizar</button>
             </div>
         </div>
 
-        <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"></div>
+        <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"></div>
 
-        <div class="grid grid-cols-1 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-3xl border shadow-sm h-[350px]">
-                <div id="chart_main" class="h-full"></div>
+        <div class="flex flex-col gap-6 mb-6">
+            <div class="bg-white p-6 rounded-3xl border shadow-sm">
+                <div id="chart_tendencia" style="height: 350px;"></div>
             </div>
             <div class="bg-white p-6 rounded-3xl border shadow-sm">
-                <div id="chart_gerencias"></div>
+                <div id="chart_gerencias" style="height: 450px;"></div>
             </div>
         </div>
 
         <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
-            <div class="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-4">
-                <div class="flex flex-col gap-1 w-full max-w-xs">
-                    <label class="text-[10px] font-black text-slate-400 uppercase italic">Gerencia:</label>
-                    <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase outline-none bg-white shadow-sm"></select>
-                </div>
-                <div class="flex gap-10">
-                    <div class="text-center">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Ejecutivos Activos</p>
-                        <p class="text-2xl font-black text-blue-600" id="kpi_count_ejec">0</p>
-                    </div>
-                    <div class="text-center border-l pl-10">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase">Horas Grupo</p>
-                        <p class="text-2xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
-                    </div>
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-sm font-black uppercase text-slate-700 italic">Detalle de Conexión y Ausentismo</h2>
+                <div class="text-right">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Horas Acumuladas</p>
+                    <p class="text-3xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                 </div>
             </div>
-            <div class="overflow-x-auto max-h-[500px]">
+            <div class="overflow-x-auto max-h-[600px]">
                 <table class="w-full text-left text-[11px]">
                     <thead class="sticky top-0 bg-white border-b z-10 text-slate-400 font-bold uppercase">
                         <tr>
-                            <th class="p-5">NIP</th>
-                            <th class="p-5">Ejecutivo / Gerencia</th>
-                            <th class="p-5 text-center">Calendario</th>
-                            <th class="p-5 text-center bg-blue-50 text-blue-600">Días On</th>
+                            <th class="p-5">Ejecutivo</th>
+                            <th class="p-5">Gerencia</th>
+                            <th class="p-5 text-center">Días de Conexión</th>
                             <th class="p-5 text-right">Total Horas</th>
                         </tr>
                     </thead>
@@ -97,7 +84,7 @@
                 const response = await fetch(GITHUB_URL);
                 const csvText = await response.text();
                 procesarCSV(csvText);
-            } catch (err) { document.getElementById('status_file').innerText = "❌ ERROR"; }
+            } catch (err) { console.error("Error crítico"); }
         }
 
         function t2s(t) {
@@ -114,121 +101,123 @@
         function procesarCSV(csv) {
             const lineas = csv.split(/\r?\n/).filter(l => l.trim().length > 10);
             const sep = lineas[0].includes(';') ? ';' : ',';
-            const cab = lineas[0].split(sep).map(h => h.trim().toUpperCase());
-            
-            // iNip es la columna E (índice 4)
-            const iAg = cab.indexOf("AGENTE"), iHr = cab.indexOf("HORAS LOGUEO"),
-                  iDi = cab.indexOf("DIA"), iMe = cab.indexOf("MES"),
-                  iGe = cab.indexOf("GERENCIA"), iEs = cab.indexOf("ESTATUS"),
-                  iNip = 4; // Columna E
+            const iAg = 0, iUs = 1, iHr = 2, iGe = 4, iDi = 7, iMe = 8;
 
-            dataGlobal = {}; fechasGlobal = []; let setF = new Set(), setG = new Set();
+            dataGlobal = {}; fechasGlobal = []; let setF = new Set(); 
+            mesesDisp = {};
 
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
-                if (col[iEs]?.toUpperCase() !== "ACTIVO") return;
+                if(col.length < 8) return;
+                let ger = (col[iGe] || "SIN GERENCIA").toUpperCase();
+                if(ger === "" || ger.includes("UNDEFINED")) ger = "SIN GERENCIA";
                 
-                let ger = (col[iGe] && col[iGe].length > 1 && col[iGe] !== "undefined") ? col[iGe].toUpperCase() : "SIN GERENCIA";
-                let nip = col[iNip] || "N/A";
-                const ag = col[iAg], fec = col[iDi], mesId = fec.split('/')[1];
-                
-                setF.add(fec); setG.add(ger);
-                if(mesId) mesesDisp[mesId] = col[iMe] || "MES";
-
-                // Usamos NIP + Agente como llave para mayor precisión
-                let key = nip + "_" + ag;
-                if (!dataGlobal[key]) dataGlobal[key] = { ag, nip, ger, logs: {} };
-                dataGlobal[key].logs[fec] = (dataGlobal[key].logs[fec] || 0) + t2s(col[iHr]);
+                const us = col[iUs], fec = col[iDi], mesId = col[iMe];
+                setF.add(fec);
+                if(mesId) mesesDisp[mesId.toLowerCase()] = mesId.toLowerCase();
+                if (!dataGlobal[us]) dataGlobal[us] = { ag: col[iAg], us, ger, logs: {} };
+                dataGlobal[us].logs[fec] = (dataGlobal[us].logs[fec] || 0) + t2s(col[iHr]);
             });
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-            const sortedGer = [...setG].sort();
-            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + sortedGer.map(g => `<option value="${g}">${g}</option>`).join('');
-            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).sort().map(id => `<option value="${id}">${mesesDisp[id]}</option>`).join('');
-            
-            document.getElementById('status_file').innerText = "✅ DATOS ACTUALIZADOS";
+            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+            actualizarSelectorDias();
             render();
+        }
+
+        function actualizarSelectorDias() {
+            const mesSel = document.getElementById('sel_mes').value;
+            const diasMes = fechasGlobal.filter(f => f.toLowerCase().includes(mesSel));
+            document.getElementById('sel_dia').innerHTML = '<option value="ALL">TODOS</option>' + 
+                diasMes.map(f => `<option value="${f}">${f.split('/')[0]}</option>`).join('');
         }
 
         function render() {
             const mesSel = document.getElementById('sel_mes').value;
-            const gerSel = document.getElementById('sel_ger').value;
-            const search = document.getElementById('search_nip').value.toLowerCase();
-            const dIni = parseInt(document.getElementById('dia_inicio').value);
-            const dFin = parseInt(document.getElementById('dia_fin').value);
-
-            const fFilt = fechasGlobal.filter(f => {
-                const p = f.split('/'); return p[1] === mesSel && parseInt(p[0]) >= dIni && parseInt(p[0]) <= dFin;
-            });
-
-            let list = [], timeline = fFilt.map(() => 0), statsGer = {}, totalGeneralS = 0;
+            const diaSel = document.getElementById('sel_dia').value;
+            
+            let list = [], statsGer = {}, tendencia = {};
+            fechasGlobal.forEach(f => { if(f.toLowerCase().includes(mesSel)) tendencia[f] = 0; });
 
             Object.values(dataGlobal).forEach(u => {
-                let sum = 0, on = 0, boxes = "";
-                fFilt.forEach((f, i) => {
-                    const s = u.logs[f] || 0; sum += s; timeline[i] += s;
-                    if(s > 0) on++;
-                    boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
+                let sum = 0, diasConect = 0, boxes = "";
+                fechasGlobal.forEach(f => {
+                    if(f.toLowerCase().includes(mesSel)) {
+                        const s = u.logs[f] || 0;
+                        if(diaSel === "ALL" || f === diaSel) { sum += s; }
+                        if(s > 0) {
+                            diasConect++;
+                            tendencia[f] += s;
+                        }
+                        boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
+                    }
                 });
 
-                if (sum === 0 && on === 0) return;
-                
-                if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
-                statsGer[u.ger].horas += sum;
-                statsGer[u.ger].ops++;
-                totalGeneralS += sum;
-
-                const matchSearch = u.ag.toLowerCase().includes(search) || u.nip.toLowerCase().includes(search);
-                if ((gerSel === "ALL" || u.ger === gerSel) && matchSearch) {
-                    list.push({ ...u, sum, on, boxes });
+                if (sum > 0 || (diaSel === "ALL" && Object.keys(u.logs).some(k => k.toLowerCase().includes(mesSel)))) {
+                    if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
+                    statsGer[u.ger].horas += sum;
+                    statsGer[u.ger].ops++;
+                    list.push({ ...u, sum, diasConect, boxes });
                 }
             });
 
-            // Actualizar KPIs y Tarjetas
-            document.getElementById('header_total_hrs').innerText = s2t(totalGeneralS);
-            document.getElementById('kpi_count_ejec').innerText = list.length;
+            // TARJETAS (GERENCIA + ALERTA)
+            const sGerArr = Object.entries(statsGer).sort((a,b) => b[1].horas - a[1].horas);
+            const bajos = list.filter(e => e.diasConect < 3).length;
+
+            let cardsHtml = sGerArr.slice(0, 4).map(([name, data]) => `
+                <div class="p-4 card-stat">
+                    <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
+                    <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)}</h3>
+                    <p class="text-[9px] font-bold text-blue-600 uppercase">👥 ${data.ops} Ejecutivos</p>
+                </div>`).join('');
+            
+            cardsHtml += `
+                <div class="p-4 card-alert">
+                    <p class="text-[9px] font-black text-red-500 uppercase">Alertas Conexión</p>
+                    <h3 class="text-xl font-black text-red-600">${bajos}</h3>
+                    <p class="text-[9px] font-bold text-red-400 uppercase">Ejecutivos &lt; 3 días</p>
+                </div>`;
+            
+            document.getElementById('cards_container').innerHTML = cardsHtml;
             document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a, b) => a + b.sum, 0));
 
-            const sGerArr = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
-            document.getElementById('cards_container').innerHTML = sGerArr.map(([name, data]) => `
-                <div class="p-5 card-stat">
-                    <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
-                    <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)} <span class="text-xs text-blue-500 font-bold">h</span></h3>
-                    <p class="text-[10px] font-bold text-slate-500 mt-2">👤 ${data.ops} Ejecutivos</p>
-                </div>
-            `).join('');
-
-            // TABLA con NIP
-            list.sort((a,b) => a.on - b.on);
-            document.getElementById('table_body').innerHTML = list.map(u => `
+            // TABLA ORDENADA (MENOS DÍAS PRIMERO)
+            document.getElementById('table_body').innerHTML = list.sort((a,b)=>a.diasConect - b.diasConect).map(u => `
                 <tr>
-                    <td class="p-4"><span class="nip-tag">${u.nip}</span></td>
-                    <td class="p-4"><p class="font-black text-slate-700 uppercase leading-none">${u.ag}</p><p class="text-[9px] text-slate-400 font-bold mt-1">${u.ger}</p></td>
-                    <td class="p-4 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
-                    <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${u.on}</td>
-                    <td class="p-4 text-right font-black text-slate-600">${s2t(u.sum)}</td>
-                </tr>
-            `).join('');
+                    <td class="p-4"><b>${u.ag}</b><br><span class="text-[9px] text-slate-400 font-mono">${u.us}</span></td>
+                    <td class="p-4 font-bold text-slate-500 text-[10px] uppercase">${u.ger}</td>
+                    <td class="p-4 flex flex-wrap justify-center gap-1">${u.boxes}</td>
+                    <td class="p-4 text-right font-black text-slate-700">${s2t(u.sum)}</td>
+                </tr>`).join('');
 
-            // Gráficas
-            Plotly.newPlot('chart_main', [{
-                x: fFilt.map(f => f.substring(0,5)), y: timeline.map(v => (v/3600).toFixed(1)),
-                mode: 'lines+markers+text', text: timeline.map(v => (v/3600).toFixed(1)),
-                textposition: 'top center', line: { color: '#2563eb', width: 3 }
-            }], { margin: {t:40, b:40, l:40, r:20} }, {responsive:true});
+            // GRÁFICA TENDENCIA (ARRIBA) CON ETIQUETAS
+            const xT = Object.keys(tendencia).map(f => f.split('/')[0]);
+            const yT = Object.values(tendencia).map(s => (s/3600).toFixed(1));
+            Plotly.newPlot('chart_tendencia', [{
+                x: xT, y: yT, type: 'scatter', mode: 'lines+markers+text',
+                text: yT, textposition: 'top center',
+                line: { color: '#2563eb', width: 3, shape: 'spline' },
+                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.1)'
+            }], { 
+                title: { text: 'TENDENCIA DE HORAS POR DÍA', font: {size:12, family:'Arial Black'} },
+                margin: {l:40, r:40, t:40, b:40}, xaxis: {title: 'Día del Mes'}, yaxis: {title: 'Horas'}
+            }, { responsive: true, displayModeBar: false });
 
+            // GRÁFICA GERENCIAS (ABAJO)
+            const sGerSorted = [...sGerArr].reverse();
             Plotly.newPlot('chart_gerencias', [{
-                y: sGerArr.map(e => e[0]), x: sGerArr.map(e => (e[1].horas/3600).toFixed(0)),
-                type: 'bar', orientation: 'h',
-                marker: { color: sGerArr.map((_, i) => `rgba(37, 99, 235, ${0.4 + (i / sGerArr.length) * 0.6})`) },
-                text: sGerArr.map(e => (e[1].horas/3600).toFixed(0) + " h"),
-                texttemplate: '%{text}', textposition: 'outside', cliponaxis: false
-            }], { margin: {l:160, r:60, t:50, b:50} }, {responsive:true});
+                y: sGerSorted.map(e => e[0]), x: sGerSorted.map(e => (e[1].horas/3600).toFixed(1)),
+                type: 'bar', orientation: 'h', marker: { color: '#2563eb' },
+                text: sGerSorted.map(e => (e[1].horas/3600).toFixed(1) + " h"), textposition: 'outside'
+            }], { 
+                title: { text: 'ACUMULADO POR GERENCIA', font: {size:12, family:'Arial Black'} },
+                margin: {l:160, r:60, t:40, b:40}
+            }, { responsive: true, displayModeBar: false });
         }
 
-        ['sel_mes', 'sel_ger', 'dia_inicio', 'dia_fin', 'search_nip'].forEach(id => {
-            document.getElementById(id).addEventListener('input', render);
-        });
+        document.getElementById('sel_mes').addEventListener('change', () => { actualizarSelectorDias(); render(); });
+        document.getElementById('sel_dia').addEventListener('change', render);
     </script>
 </body>
 </html>
