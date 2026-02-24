@@ -12,7 +12,7 @@
         .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
         .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         body { background-color: #f8fafc; touch-action: pan-y; }
-        .static-chart { pointer-events: none; }
+        .static-chart { pointer-events: none; } /* Refuerzo de bloqueo touch */
     </style>
 </head>
 <body class="p-4">
@@ -26,7 +26,7 @@
             <div class="flex gap-4 items-center">
                 <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none"></select>
                 <select id="sel_dia" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none">
-                    <option value="ALL">TODOS LOS DÍAS</option>
+                    <option value="ALL">TODOS</option>
                 </select>
                 <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase">Actualizar</button>
             </div>
@@ -98,36 +98,31 @@
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
                 if(col.length < 5) return;
-
                 let gerRaw = col[iGe] ? col[iGe].toUpperCase() : "";
                 let ger = (gerRaw === "" || gerRaw.includes("SIN GERENCIA") || gerRaw === "UNDEFINED") ? "SIN GERENCIA" : gerRaw;
-                
                 const ag = col[iAg], us = col[iUs], fec = col[iDi], mesId = col[iMe];
                 if(!ag || !fec) return;
-
                 setF.add(fec); 
                 setG.add(ger);
                 if(mesId) mesesDisp[mesId.toLowerCase()] = mesId.toLowerCase();
-
                 if (!dataGlobal[us]) dataGlobal[us] = { ag, us, ger, logs: {} };
                 dataGlobal[us].logs[fec] = (dataGlobal[us].logs[fec] || 0) + t2s(col[iHr]);
             });
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-            
-            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + 
-                [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
-            
+            const sortedGer = [...setG].sort();
+            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + sortedGer.map(g => `<option value="${g}">${g}</option>`).join('');
             document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             
-            llenarDias();
+            llenarDias(); // Añadido para inicializar días
             render();
         }
 
+        // Lógica para llenar el selector de días según el mes
         function llenarDias() {
             const mesSel = document.getElementById('sel_mes').value;
             const diasFilt = fechasGlobal.filter(f => f.toLowerCase().includes(mesSel));
-            let html = '<option value="ALL">TODOS LOS DÍAS</option>';
+            let html = '<option value="ALL">TODOS</option>';
             diasFilt.forEach(d => {
                 html += `<option value="${d}">${d.split('/')[0]}</option>`;
             });
@@ -137,7 +132,7 @@
         function render() {
             const mesSel = document.getElementById('sel_mes').value;
             const gerSel = document.getElementById('sel_ger').value;
-            const diaSel = document.getElementById('sel_dia').value;
+            const diaSel = document.getElementById('sel_dia').value; // Captura el día
 
             let list = [], statsGer = {};
 
@@ -146,7 +141,7 @@
                 fechasGlobal.forEach(f => {
                     const s = u.logs[f] || 0; 
                     if(f.toLowerCase().includes(mesSel)) {
-                        // Lógica de suma: Si hay día específico, solo ese día. Si no, todo el mes.
+                        // SI el selector de día es "ALL" suma todo el mes, SI NO, solo el día elegido
                         if(diaSel === "ALL" || f === diaSel) {
                             sum += s;
                             if(s > 0) on++;
@@ -186,12 +181,14 @@
                     <td class="p-4 text-right font-black text-slate-700">${s2t(u.sum)}</td>
                 </tr>`).join('');
 
-            // Gráfica actualizada según filtro
             const traces = [{
                 y: sGerArr.map(e => e[0]), 
                 x: sGerArr.map(e => (e[1].horas/3600).toFixed(1)),
                 type: 'bar', orientation: 'h',
-                marker: { color: sGerArr.map((_, i) => `rgba(37, 99, 235, ${0.4 + (i / sGerArr.length) * 0.6})`), line: { color: '#1e3a8a', width: 1 } },
+                marker: {
+                    color: sGerArr.map((_, i) => `rgba(37, 99, 235, ${0.4 + (i / sGerArr.length) * 0.6})`),
+                    line: { color: '#1e3a8a', width: 1 }
+                },
                 text: sGerArr.map(e => (e[1].horas/3600).toFixed(1) + " h"),
                 texttemplate: '%{text}', textposition: 'outside', cliponaxis: false
             }];
@@ -204,6 +201,7 @@
             }, { responsive: true, staticPlot: true, displayModeBar: false });
         }
 
+        // EVENTOS: Actualizar días al cambiar mes y renderizar al cambiar día
         document.getElementById('sel_mes').addEventListener('change', () => { llenarDias(); render(); });
         document.getElementById('sel_dia').addEventListener('change', render);
         document.getElementById('sel_ger').addEventListener('change', render);
