@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT AUDIT | Sin Gerencia Fix</title>
+    <title>GMT AUDIT | Focus Data Real</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,7 +12,6 @@
         .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
         .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         body { background-color: #f8fafc; touch-action: pan-y; }
-        .static-chart { pointer-events: none; } /* Refuerzo de bloqueo touch */
     </style>
 </head>
 <body class="p-4">
@@ -88,18 +87,24 @@
             const lineas = csv.split(/\r?\n/).filter(l => l.trim().length > 10);
             const sep = lineas[0].includes(';') ? ';' : ',';
             
-            // Índices: 0:Agente, 1:Usuario, 2:Horas, 4:Gerencia, 7:Dia, 8:Mes
-            const iAg = 0, iUs = 1, iHr = 2, iGe = 4, iDi = 7, iMe = 8;
+            // Índices según tu archivo real: 
+            // 0:Agente, 1:Usuario, 2:Horas Logueo, 4:Gerencia, 5:Estatus, 7:Dia (07/02/2026), 8:Mes
+            const iAg = 0, iUs = 1, iHr = 2, iGe = 4, iEs = 5, iDi = 7, iMe = 8;
 
             dataGlobal = {}; fechasGlobal = []; let setF = new Set(), setG = new Set();
 
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
-                if(col.length < 5) return;
+                if(col.length < 8) return;
 
-                // DETECCIÓN DE SIN GERENCIA
+                // --- LÓGICA DE UNIFICACIÓN PARA QUE NADA SE PIERDA ---
                 let gerRaw = col[iGe] ? col[iGe].toUpperCase() : "";
-                let ger = (gerRaw === "" || gerRaw.includes("SIN GERENCIA") || gerRaw === "UNDEFINED") ? "SIN GERENCIA" : gerRaw;
+                let estatus = col[iEs] ? col[iEs].toUpperCase() : "";
+                
+                // Si la gerencia está vacía, es "UNDEFINED" o el estatus es "NO REGISTRADO", lo mandamos a SIN GERENCIA
+                let ger = (gerRaw === "" || gerRaw === "UNDEFINED" || gerRaw.includes("SIN GERENCIA") || estatus.includes("NO REGISTRADO")) 
+                          ? "SIN GERENCIA" 
+                          : gerRaw;
                 
                 const ag = col[iAg], us = col[iUs], fec = col[iDi], mesId = col[iMe];
                 if(!ag || !fec) return;
@@ -108,7 +113,6 @@
                 setG.add(ger);
                 if(mesId) mesesDisp[mesId.toLowerCase()] = mesId.toLowerCase();
 
-                // Llave única por Usuario
                 if (!dataGlobal[us]) dataGlobal[us] = { ag, us, ger, logs: {} };
                 dataGlobal[us].logs[fec] = (dataGlobal[us].logs[fec] || 0) + t2s(col[iHr]);
             });
@@ -131,13 +135,12 @@
             let list = [], statsGer = {};
 
             Object.values(dataGlobal).forEach(u => {
-                let sum = 0, on = 0, boxes = "";
+                let sum = 0, boxes = "";
                 fechasGlobal.forEach(f => {
-                    const s = u.logs[f] || 0; 
-                    // Filtro por mes (asumiendo formato DD/MM/YYYY)
-                    if(f.toLowerCase().includes(mesSel) || f.includes('/0' + (Object.keys(mesesDisp).indexOf(mesSel)+1))) {
+                    // Filtro inteligente por mes para que no salgan cuadritos vacíos de otros meses
+                    if(f.toLowerCase().includes(mesSel) || !mesSel) {
+                        const s = u.logs[f] || 0; 
                         sum += s;
-                        if(s > 0) on++;
                         boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
                     }
                 });
@@ -149,14 +152,13 @@
                 statsGer[u.ger].ops++;
 
                 if (gerSel === "ALL" || u.ger === gerSel) {
-                    list.push({ ...u, sum, on, boxes });
+                    list.push({ ...u, sum, boxes });
                 }
             });
 
-            // Ordenar gerencias para el degradado
             const sGerArr = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
             
-            // TARJETAS
+            // TARJETAS (MANTIENEN TU DISEÑO)
             document.getElementById('cards_container').innerHTML = sGerArr.map(([name, data]) => `
                 <div class="p-5 card-stat">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
@@ -167,7 +169,7 @@
 
             document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a, b) => a + b.sum, 0));
 
-            // TABLA
+            // TABLA (MANTIENE TU DISEÑO)
             document.getElementById('table_body').innerHTML = list.map(u => `
                 <tr>
                     <td class="p-4"><p class="font-bold text-slate-700 uppercase">${u.ag}</p><p class="text-[9px] text-slate-400 font-mono">${u.us}</p></td>
@@ -177,7 +179,7 @@
                 </tr>
             `).join('');
 
-            // GRÁFICA BLOQUEADA TOTALMENTE
+            // GRÁFICA (TU DISEÑO BLOQUEADO)
             const traces = [{
                 y: sGerArr.map(e => e[0]), 
                 x: sGerArr.map(e => (e[1].horas/3600).toFixed(1)),
@@ -197,13 +199,7 @@
                 dragmode: false
             };
 
-            const config = { 
-                responsive: true, 
-                staticPlot: true, // Bloqueo de interacciones touch/mouse
-                displayModeBar: false 
-            };
-
-            Plotly.newPlot('chart_gerencias', traces, layout, config);
+            Plotly.newPlot('chart_gerencias', traces, layout, { responsive: true, staticPlot: true, displayModeBar: false });
         }
 
         document.getElementById('sel_mes').addEventListener('change', render);
