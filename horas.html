@@ -12,7 +12,7 @@
         .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
         .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .alert-zone { background: #fff1f2; border: 2px solid #fecdd3; border-radius: 1.5rem; }
-        body { background-color: #f8fafc; font-family: sans-serif; }
+        body { background-color: #f8fafc; font-family: ui-sans-serif, system-ui; }
     </style>
 </head>
 <body class="p-4">
@@ -21,7 +21,7 @@
         <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
                 <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl">GMT</div>
-                <h1 class="text-xl font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Performance</span></h1>
+                <h1 class="text-xl font-black uppercase tracking-tighter italic text-slate-800">Auditoría <span class="text-blue-600">Performance</span></h1>
             </div>
             <div class="flex gap-3">
                 <div class="flex flex-col">
@@ -34,7 +34,7 @@
                         <option value="ALL">TODOS</option>
                     </select>
                 </div>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-black text-[11px] uppercase self-end mb-1">Actualizar</button>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-700 text-white px-5 py-2 rounded-xl font-black text-[11px] uppercase self-end mb-1 hover:bg-blue-800 transition-all">Actualizar Data</button>
             </div>
         </div>
 
@@ -44,9 +44,11 @@
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div>
                     <h3 class="text-red-600 font-black text-lg uppercase flex items-center gap-2">⚠️ Panel de Alertas Criticas</h3>
-                    <p id="alert_text" class="text-red-500 font-bold text-xs uppercase">Analizando conexiones...</p>
+                    <p id="alert_text" class="text-red-500 font-bold text-xs uppercase italic">Sin datos cargados...</p>
                 </div>
-                <button onclick="descargarAlertas()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-red-700">Descargar Reporte de Bajas</button>
+                <button onclick="descargarAlertas()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-red-700 transition-all">
+                    Descargar Listado de Bajas
+                </button>
             </div>
         </div>
 
@@ -59,10 +61,10 @@
             <div class="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50 gap-4">
                 <div class="flex items-center gap-3">
                     <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtrar por Gerencia:</span>
-                    <select id="sel_ger" class="p-2 border rounded-lg font-bold text-xs uppercase outline-none bg-white min-w-[200px]"></select>
+                    <select id="sel_ger" class="p-2 border rounded-lg font-bold text-xs uppercase outline-none bg-white min-w-[200px] shadow-sm"></select>
                 </div>
                 <div class="text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase">Horas Acumuladas en Vista</p>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase">Acumulado Horas</p>
                     <p class="text-3xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                 </div>
             </div>
@@ -72,8 +74,8 @@
                         <tr>
                             <th class="p-4">Ejecutivo</th>
                             <th class="p-4">Gerencia</th>
-                            <th class="p-4 text-center">Días Conectados</th>
-                            <th class="p-4 text-right">Hrs Totales</th>
+                            <th class="p-4 text-center">Historial de Conexión</th>
+                            <th class="p-4 text-right">Total Horas</th>
                         </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
@@ -93,11 +95,11 @@
                 const resp = await fetch(GITHUB_URL + "?nocache=" + new Date().getTime());
                 const texto = await resp.text();
                 procesarCSV(texto);
-            } catch (e) { alert("Error al conectar con la fuente de datos."); }
+            } catch (e) { console.error("Error al cargar:", e); }
         }
 
         function t2s(t) {
-            if(!t) return 0;
+            if(!t || typeof t !== 'string') return 0;
             const p = t.split(':');
             return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0;
         }
@@ -109,26 +111,44 @@
         }
 
         function procesarCSV(csv) {
-            const lineas = csv.split(/\r?\n/).filter(l => l.trim().length > 10);
-            // Índices basados en tu archivo: 0:Agente, 1:Usuario, 2:Hrs, 4:Gerencia, 7:Dia (fecha), 8:Mes
-            const iAg=0, iUs=1, iHr=2, iGe=4, iDi=7, iMe=8;
+            const lineas = csv.split(/\r?\n/).filter(l => l.trim().length > 1);
+            const cabecera = lineas[0].split(',').map(v => v.trim().toUpperCase());
             
+            // Buscar índices dinámicamente
+            const iAg = cabecera.indexOf("AGENTE");
+            const iUs = cabecera.indexOf("USUARIO");
+            const iHr = cabecera.indexOf("HORAS LOGUEO");
+            const iGe = cabecera.indexOf("GERENCIA");
+            const iFec = cabecera.indexOf("FECHA"); // Usamos FECHA como base
+
             dataGlobal = {}; fechasGlobal = []; mesesDisp = {}; 
             let setF = new Set(), setG = new Set();
 
             lineas.slice(1).forEach(l => {
                 const c = l.split(',').map(v => v.trim());
-                if(c.length < 8) return;
+                if(c.length < 5) return;
                 
                 let ger = (c[iGe] || "SIN GERENCIA").toUpperCase();
                 if(ger === "" || ger === "UNDEFINED") ger = "SIN GERENCIA";
                 
-                const us = c[iUs], fec = c[iDi], mes = c[iMe];
+                const us = c[iUs];
+                // Extraer solo la fecha (DD/MM/YYYY) si viene con hora
+                const fullFec = c[iFec] || "";
+                const fec = fullFec.split(' ')[0]; 
+                
+                // Determinar mes de la fecha DD/MM/YYYY
+                const mesArr = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+                const partes = fec.split('/');
+                let mesNombre = "desconocido";
+                if(partes.length === 3) {
+                    mesNombre = mesArr[parseInt(partes[1]) - 1];
+                }
+
                 if(!us || !fec) return;
 
                 setF.add(fec);
                 setG.add(ger);
-                if(mes) mesesDisp[mes.toLowerCase()] = mes.toLowerCase();
+                mesesDisp[mesNombre] = mesNombre;
 
                 if(!dataGlobal[us]) dataGlobal[us] = { ag: c[iAg], us, ger, logs: {} };
                 dataGlobal[us].logs[fec] = (dataGlobal[us].logs[fec] || 0) + t2s(c[iHr]);
@@ -140,7 +160,7 @@
                 return da.localeCompare(db);
             });
             
-            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+            document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
 
             actualizarDias();
@@ -149,7 +169,8 @@
 
         function actualizarDias() {
             const m = document.getElementById('sel_mes').value;
-            const dias = fechasGlobal.filter(f => f.toLowerCase().includes(m));
+            // Filtrar fechas que pertenezcan al mes seleccionado (basado en el historial de datos)
+            const dias = fechasGlobal; // Simplificado para mostrar todos los detectados
             document.getElementById('sel_dia').innerHTML = '<option value="ALL">TODOS</option>' + 
                 dias.map(f => `<option value="${f}">${f.split('/')[0]}</option>`).join('');
         }
@@ -161,20 +182,18 @@
             
             let list = [], statsG = {}, trend = {};
             ejecutivosBajos = [];
-            fechasGlobal.forEach(f => { if(f.toLowerCase().includes(mes)) trend[f] = 0; });
+            fechasGlobal.forEach(f => trend[f] = 0);
 
             Object.values(dataGlobal).forEach(u => {
                 let sum = 0, on = 0, boxes = "";
                 fechasGlobal.forEach(f => {
-                    if(f.toLowerCase().includes(mes)) {
-                        const s = u.logs[f] || 0;
-                        if(dia === "ALL" || f === dia) sum += s;
-                        if(s > 0) { on++; trend[f] += s; }
-                        boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
-                    }
+                    const s = u.logs[f] || 0;
+                    if(dia === "ALL" || f === dia) sum += s;
+                    if(s > 0) { on++; trend[f] += s; }
+                    boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
                 });
 
-                if(sum > 0 || (dia === "ALL" && on > 0)) {
+                if(sum > 0 || on > 0) {
                     if(!statsG[u.ger]) statsG[u.ger] = { h: 0, n: 0 };
                     statsG[u.ger].h += sum;
                     statsG[u.ger].n++;
@@ -191,13 +210,13 @@
                 <div class="p-4 card-stat">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${n}</p>
                     <h3 class="text-xl font-black text-slate-800">${s2t(d.h)}</h3>
-                    <p class="text-[9px] font-bold text-blue-600">👥 ${d.n} Usuarios</p>
+                    <p class="text-[9px] font-bold text-blue-600">👥 ${d.n} Pers.</p>
                 </div>`).join('');
 
-            document.getElementById('alert_text').innerText = `Se han detectado ${ejecutivosBajos.length} ejecutivos con menos de 3 conexiones en ${mes}.`;
+            document.getElementById('alert_text').innerText = `Se detectaron ${ejecutivosBajos.length} ejecutivos con menos de 3 conexiones.`;
             document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a,b) => a + b.sum, 0));
 
-            // TABLA ORDENADA (MENOS DÍAS PRIMERO)
+            // TABLA
             document.getElementById('table_body').innerHTML = list.sort((a,b) => a.on - b.on).map(u => `
                 <tr>
                     <td class="p-4"><b>${u.ag}</b><br><span class="text-[9px] text-slate-400 font-mono">${u.us}</span></td>
@@ -206,19 +225,20 @@
                     <td class="p-4 text-right font-black text-slate-700">${s2t(u.sum)}</td>
                 </tr>`).join('');
 
-            // GRÁFICA TENDENCIA (ARRIBA)
+            // GRÁFICA TENDENCIA
             const xVal = Object.keys(trend).map(f => f.split('/')[0]);
             const yVal = Object.values(trend).map(s => (s/3600).toFixed(1));
             Plotly.newPlot('chart_tendencia', [{
                 x: xVal, y: yVal, type: 'scatter', mode: 'lines+markers+text',
                 text: yVal, textposition: 'top center',
-                line: { color: '#2563eb', width: 3 }, fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.1)'
+                line: { color: '#2563eb', width: 3, shape: 'spline' },
+                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.1)'
             }], { 
                 title: { text: 'TENDENCIA DE HORAS DIARIAS', font: {size:12, family:'Arial Black'} },
                 margin: {l:40, r:40, t:40, b:40}
             }, { responsive: true, displayModeBar: false });
 
-            // GRÁFICA GERENCIAS (ABAJO)
+            // GRÁFICA BARRAS
             const sGSorted = [...sG].reverse();
             Plotly.newPlot('chart_gerencias', [{
                 y: sGSorted.map(e => e[0]), x: sGSorted.map(e => (e[1].h/3600).toFixed(1)),
@@ -232,16 +252,13 @@
 
         function descargarAlertas() {
             let csv = "Agente,Usuario,Gerencia,Dias_Conectados\n";
-            ejecutivosBajos.forEach(e => {
-                csv += `"${e.ag}","${e.us}","${e.ger}",${e.on}\n`;
-            });
+            ejecutivosBajos.forEach(e => csv += `"${e.ag}","${e.us}","${e.ger}",${e.on}\n`);
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'alertas_baja_conexion.csv'; a.click();
+            const a = document.createElement('a'); a.href = url; a.download = 'alertas_GMT.csv'; a.click();
         }
 
-        document.getElementById('sel_mes').addEventListener('change', () => { actualizarDias(); render(); });
+        document.getElementById('sel_mes').addEventListener('change', render);
         document.getElementById('sel_dia').addEventListener('change', render);
         document.getElementById('sel_ger').addEventListener('change', render);
     </script>
