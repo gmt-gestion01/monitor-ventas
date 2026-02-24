@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT AUDIT | Vista Persistente</title>
+    <title>GMT AUDIT | Performance Final</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
         .day-box { width: 14px; height: 14px; border-radius: 2px; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
         .card-stat { border-left: 4px solid #2563eb; background: white; }
         .scroll-custom::-webkit-scrollbar { width: 4px; }
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* Evita que Plotly oculte etiquetas por falta de espacio */
+        .js-plotly-plot .plotly .xaxis .tick text { font-weight: bold !important; }
     </style>
 </head>
 <body class="p-2 md:p-4">
@@ -35,29 +38,35 @@
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
                     <div class="bg-blue-600 px-3 py-1 rounded-lg text-white font-black italic text-xl">GMT</div>
-                    <h2 class="text-xs font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Pro</span></h2>
+                    <h2 class="text-xs font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Horas</span></h2>
                 </div>
-                <button onclick="forzarSincronizacion()" class="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">🔄 Sincronizar</button>
+                <button onclick="forzarSincronizacion()" class="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-4 py-2 rounded-xl border border-blue-100">🔄 Sincronizar Base</button>
             </div>
             <div class="grid grid-cols-2 gap-3">
-                <select id="sel_mes" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs"></select>
-                <select id="sel_dia" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs"></select>
+                <div class="space-y-1">
+                    <span class="text-[9px] font-bold text-slate-400 ml-1">SELECCIONAR MES</span>
+                    <select id="sel_mes" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs"></select>
+                </div>
+                <div class="space-y-1">
+                    <span class="text-[9px] font-bold text-slate-400 ml-1">SELECCIONAR DÍA</span>
+                    <select id="sel_dia" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs"></select>
+                </div>
             </div>
         </div>
 
-        <div class="space-y-3 mb-3">
-            <div class="bg-white p-3 rounded-2xl border shadow-sm h-[320px]">
-                <div id="chart_tendencia" class="w-full h-full"></div>
+        <div class="grid grid-cols-1 gap-3 mb-3">
+            <div class="bg-white p-3 rounded-2xl border shadow-sm">
+                <div id="chart_tendencia" style="height: 300px;"></div>
             </div>
-            <div class="bg-white p-3 rounded-2xl border shadow-sm h-[400px]">
-                <div id="chart_gerencias" class="w-full h-full"></div>
+            <div class="bg-white p-3 rounded-2xl border shadow-sm">
+                <div id="chart_gerencias" style="height: 450px;"></div>
             </div>
         </div>
 
         <div class="bg-white border border-red-100 rounded-2xl mb-3 shadow-sm overflow-hidden">
             <div class="bg-red-50 px-4 py-3 flex justify-between items-center border-b border-red-100">
-                <h3 class="text-red-600 font-black text-[10px] uppercase tracking-widest">🚨 Alertas (+2 días sin conexión)</h3>
-                <button onclick="descargarAlertas()" class="bg-red-600 text-white text-[9px] px-3 py-1 rounded-lg font-bold uppercase">Descargar CSV</button>
+                <h3 class="text-red-600 font-black text-[10px] uppercase tracking-widest font-bold">🚨 Alertas (+2 días sin conexión)</h3>
+                <button onclick="descargarAlertas()" class="bg-red-600 text-white text-[9px] px-3 py-1 rounded-lg font-bold uppercase">CSV</button>
             </div>
             <div class="max-h-[160px] overflow-y-auto scroll-custom">
                 <table class="w-full text-[11px]"><tbody id="alert_table_body" class="divide-y divide-red-50"></tbody></table>
@@ -65,13 +74,18 @@
         </div>
 
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
-            <div class="p-4 border-b bg-slate-50/50">
+            <div class="p-4 border-b bg-slate-50/50 flex flex-col md:flex-row gap-3 justify-between items-center">
                 <select id="sel_ger" class="w-full md:w-[350px] p-3 border border-slate-200 rounded-xl font-bold text-xs uppercase"></select>
+                <span class="text-[10px] font-bold text-slate-400">CALENDARIO DE ASISTENCIA</span>
             </div>
             <div class="overflow-x-auto max-h-[500px] scroll-custom">
-                <table class="w-full text-[11px] text-left">
-                    <thead class="bg-slate-100 text-slate-500 font-bold uppercase sticky top-0">
-                        <tr><th class="p-4">Agente</th><th class="p-4 text-center">Calendario</th><th class="p-4 text-right">Hrs</th></tr>
+                <table class="w-full text-[11px] text-left border-collapse">
+                    <thead class="bg-slate-100 text-slate-500 font-bold uppercase sticky top-0 z-10">
+                        <tr>
+                            <th class="p-4 border-b">Agente / Gerencia</th>
+                            <th class="p-4 text-center border-b">Días Conectados</th>
+                            <th class="p-4 text-right border-b">Total Hrs</th>
+                        </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
                 </table>
@@ -83,7 +97,6 @@
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
         let rawData = [], fechasGlobal = [], alertasActuales = [];
 
-        // AL CARGAR: Revisar si hay datos y filtros guardados
         window.onload = async () => {
             const cacheData = localStorage.getItem('gmt_data');
             if(cacheData) {
@@ -121,7 +134,7 @@
 
                 localStorage.setItem('gmt_data', JSON.stringify(rawData));
                 procesarHeadersYFiltros();
-            } catch (e) { console.error("Error al cargar"); }
+            } catch (e) { alert("Error al sincronizar datos."); }
         }
 
         function forzarSincronizacion() {
@@ -145,23 +158,20 @@
             rawData.forEach(r => { setM.add(r.mes); setG.add(r.gerencia); setF.add(r.fecha); });
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
 
-            let mesH = '<option value="ALL">TODOS LOS MESES</option>';
+            let mesH = '<option value="ALL">🗓️ TODOS LOS MESES</option>';
             [...setM].sort().forEach(m => mesH += `<option value="${m}">${m.toUpperCase()}</option>`);
             document.getElementById('sel_mes').innerHTML = mesH;
             
-            let gerH = '<option value="ALL">TODOS LOS GERENTES</option>';
+            let gerH = '<option value="ALL">👥 TODOS LOS GERENTES</option>';
             [...setG].sort().forEach(g => gerH += `<option value="${g}">${g}</option>`);
             document.getElementById('sel_ger').innerHTML = gerH;
 
-            // Recuperar filtros de la última sesión
-            const lastMes = localStorage.getItem('last_mes') || 'ALL';
-            const lastGer = localStorage.getItem('last_ger') || 'ALL';
-            document.getElementById('sel_mes').value = lastMes;
-            document.getElementById('sel_ger').value = lastGer;
+            // Recuperar filtros persistentes
+            document.getElementById('sel_mes').value = localStorage.getItem('last_mes') || 'ALL';
+            document.getElementById('sel_ger').value = localStorage.getItem('last_ger') || 'ALL';
 
             actualizarDias();
-            const lastDia = localStorage.getItem('last_dia') || 'ALL';
-            document.getElementById('sel_dia').value = lastDia;
+            document.getElementById('sel_dia').value = localStorage.getItem('last_dia') || 'ALL';
 
             render();
         }
@@ -169,16 +179,17 @@
         function actualizarDias() {
             const m = document.getElementById('sel_mes').value;
             const diasF = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (m === 'ALL' || r.mes === m)));
-            let diaH = '<option value="ALL">TODOS LOS DÍAS</option>';
+            let diaH = '<option value="ALL">📅 TODOS LOS DÍAS</option>';
             diasF.forEach(f => diaH += `<option value="${f}">${f}</option>`);
             document.getElementById('sel_dia').innerHTML = diaH;
         }
 
         function render() {
-            // Guardar estado actual de filtros
             const mSel = document.getElementById('sel_mes').value;
             const dSel = document.getElementById('sel_dia').value;
             const gSel = document.getElementById('sel_ger').value;
+            
+            // Guardar filtros para evitar borrado en navegación
             localStorage.setItem('last_mes', mSel);
             localStorage.setItem('last_dia', dSel);
             localStorage.setItem('last_ger', gSel);
@@ -214,10 +225,14 @@
             // TABLA
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>a.total-b.total).map(u => {
                 let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
-                return `<tr><td class="p-4 font-bold">${u.agente}</td><td class="p-4 flex flex-wrap justify-center gap-px">${bx}</td><td class="p-4 text-right pr-6 font-black">${s2t(u.total)}</td></tr>`;
+                return `<tr>
+                    <td class="p-4"><span class="font-black text-slate-800">${u.agente}</span><br><span class="text-[8px] uppercase text-slate-400 font-bold">${u.ger}</span></td>
+                    <td class="p-4 flex flex-wrap justify-center gap-px max-w-[300px] mx-auto">${bx}</td>
+                    <td class="p-4 text-right pr-6 font-black text-blue-600">${s2t(u.total)}</td>
+                </tr>`;
             }).join('');
 
-            // DIBUJAR GRÁFICAS (CON PURGA DE CONTENEDOR)
+            // DIBUJAR GRÁFICAS (CORRECCIÓN DE ETIQUETAS)
             setTimeout(() => {
                 const config = { responsive: true, displayModeBar: false };
                 
@@ -227,27 +242,48 @@
                     y: Object.values(tendencia).map(s => (s/3600).toFixed(1)),
                     type: 'scatter', mode: 'lines+markers+text',
                     text: Object.values(tendencia).map(s => (s/3600).toFixed(1)),
-                    textposition: 'top center', line: { color: '#2563eb' }
-                }], { margin: { l:30, r:20, t:40, b:40 }, title: '<b>TENDENCIA DIARIA (HRS)</b>' }, config);
+                    textposition: 'top center', 
+                    textfont: { weight: 'bold', color: '#1e40af' },
+                    line: { color: '#2563eb', width: 4 },
+                    marker: { size: 10, color: '#1e40af', line: {width: 2, color: '#fff'} }
+                }], { 
+                    margin: { l:40, r:20, t:50, b:40 }, 
+                    title: { text: '<b>TENDENCIA DE HORAS DIARIAS</b>', font: {size: 14} },
+                    xaxis: { title: 'Día del Mes', showgrid: false },
+                    yaxis: { title: 'Horas', showgrid: true, gridcolor: '#f1f5f9' }
+                }, config);
 
-                // 2. GERENCIAS (FORZADA)
+                // 2. GERENCIAS (CON ETIQUETAS FORZADAS)
                 const sG = Object.entries(statsG).sort((a,b) => a[1].h - b[1].h);
+                const xVals = sG.map(e => (e[1].h/3600).toFixed(1));
+                
                 Plotly.newPlot('chart_gerencias', [{
                     y: sG.map(e => e[0]), 
-                    x: sG.map(e => (e[1].h/3600).toFixed(1)),
+                    x: xVals,
                     type: 'bar', orientation: 'h', 
-                    text: sG.map(e => (e[1].h/3600).toFixed(1) + 'h'),
-                    textposition: 'outside', marker: { color: '#2563eb' }
-                }], { margin: { l:140, r:50, t:40, b:40 }, title: '<b>HORAS POR GERENCIA</b>' }, config);
-                
-                // Forzar ajuste de tamaño para que no se vea cortada
-                Plotly.Plots.resize('chart_gerencias');
-            }, 350);
+                    text: xVals.map(v => v + 'h'),
+                    textposition: 'outside', 
+                    textfont: { family: 'Inter', size: 11, weight: 'bold' },
+                    marker: { 
+                        color: '#2563eb',
+                        line: { width: 1, color: '#1e40af' }
+                    },
+                    cliponaxis: false // IMPORTANTE: Evita que se corten las etiquetas
+                }], { 
+                    margin: { l:150, r:80, t:50, b:50 }, 
+                    title: { text: '<b>PRODUCCIÓN TOTAL POR GERENTE</b>', font: {size: 14} },
+                    xaxis: { title: 'Horas Acumuladas', showgrid: true, gridcolor: '#f1f5f9' },
+                    yaxis: { automargin: true }
+                }, config);
+            }, 400);
         }
 
         function descargarAlertas() {
-            let csv = "Agente,Dias_OFF,Horas\n";
-            alertasActuales.forEach(e => csv += `"${e.agente}",${fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (document.getElementById('sel_mes').value === 'ALL' || r.mes === document.getElementById('sel_mes').value))).length - e.dias.size},"${s2t(e.total)}"\n`);
+            let csv = "Agente,Gerencia,Dias_OFF,Horas\n";
+            alertasActuales.forEach(e => {
+                const dOff = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (document.getElementById('sel_mes').value === 'ALL' || r.mes === document.getElementById('sel_mes').value))).length - e.dias.size;
+                csv += `"${e.agente}","${e.ger}",${dOff},"${s2t(e.total)}"\n`;
+            });
             const blob = new Blob([csv], { type: 'text/csv' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
