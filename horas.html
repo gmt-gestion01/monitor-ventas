@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT AUDIT | Control Total</title>
+    <title>GMT AUDIT | Sin Gerencia Fix</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,7 +11,8 @@
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
         .card-stat { border-left: 5px solid #2563eb; background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        body { background-color: #f8fafc; }
+        body { background-color: #f8fafc; touch-action: pan-y; }
+        .static-chart { pointer-events: none; }
     </style>
 </head>
 <body class="p-4">
@@ -20,43 +21,29 @@
         <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
                 <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic text-xl">GMT</div>
-                <h1 class="text-xl font-black uppercase tracking-tighter text-slate-800">Auditoría <span class="text-blue-600">Performance</span></h1>
+                <h1 class="text-xl font-black uppercase tracking-tighter">Auditoría <span class="text-blue-600">Performance</span></h1>
             </div>
             <div class="flex gap-4 items-center">
-                <div class="flex flex-col">
-                    <span class="text-[9px] font-bold text-slate-400 ml-1 uppercase">Mes</span>
-                    <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none shadow-sm min-w-[110px]"></select>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-[9px] font-bold text-slate-400 ml-1 uppercase">Día</span>
-                    <select id="sel_dia" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none shadow-sm min-w-[80px]">
-                        <option value="ALL">TODOS</option>
-                    </select>
-                </div>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 mt-3 rounded-xl font-black text-[11px] uppercase">Actualizar</button>
+                <select id="sel_mes" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none"></select>
+                <select id="sel_dia" class="bg-white border p-2 rounded-xl font-bold text-sm outline-none">
+                    <option value="ALL">TODOS LOS DÍAS</option>
+                </select>
+                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase">Actualizar</button>
             </div>
         </div>
 
-        <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"></div>
+        <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-3xl border shadow-sm">
-                <div id="chart_gerencias" style="height: 400px;"></div>
-            </div>
-            <div class="bg-white p-6 rounded-3xl border shadow-sm">
-                <div id="chart_tendencia" style="height: 400px;"></div>
-            </div>
+        <div class="bg-white p-6 rounded-3xl border shadow-sm mb-6">
+            <div id="chart_gerencias" style="height: 500px;"></div>
         </div>
 
         <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
             <div class="p-6 border-b flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-4">
-                <div class="flex flex-col w-full md:w-64">
-                    <span class="text-[9px] font-bold text-slate-400 ml-1 uppercase">Filtrar por Gerencia</span>
-                    <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase outline-none bg-white shadow-sm"></select>
-                </div>
+                <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase outline-none w-full md:w-64 bg-white"></select>
                 <div class="text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest" id="label_total">Horas Totales</p>
-                    <p class="text-3xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase">Horas Grupo</p>
+                    <p class="text-2xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
                 </div>
             </div>
             <div class="overflow-x-auto max-h-[500px]">
@@ -64,9 +51,9 @@
                     <thead class="sticky top-0 bg-white border-b z-10 text-slate-400 font-bold uppercase">
                         <tr>
                             <th class="p-5">Agente / Usuario</th>
-                            <th class="p-5">Gerencia</th>
+                            <th class="p-5">Gerencia (Col E)</th>
                             <th class="p-5 text-center">Calendario</th>
-                            <th class="p-5 text-right" id="th_horas">Horas</th>
+                            <th class="p-5 text-right">Horas Totales</th>
                         </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
@@ -105,119 +92,119 @@
             const sep = lineas[0].includes(';') ? ';' : ',';
             const iAg = 0, iUs = 1, iHr = 2, iGe = 4, iDi = 7, iMe = 8;
 
-            dataGlobal = {}; fechasGlobal = []; let setG = new Set(), setF = new Set();
+            dataGlobal = {}; fechasGlobal = []; let setF = new Set(), setG = new Set();
             mesesDisp = {};
 
             lineas.slice(1).forEach(l => {
                 const col = l.split(sep).map(c => c.trim());
-                if(col.length < 8) return;
-                let ger = (col[iGe] || "SIN GERENCIA").toUpperCase();
-                if(ger === "" || ger.includes("UNDEFINED")) ger = "SIN GERENCIA";
-                const us = col[iUs], fec = col[iDi], mesId = col[iMe];
-                setF.add(fec); setG.add(ger);
+                if(col.length < 5) return;
+
+                let gerRaw = col[iGe] ? col[iGe].toUpperCase() : "";
+                let ger = (gerRaw === "" || gerRaw.includes("SIN GERENCIA") || gerRaw === "UNDEFINED") ? "SIN GERENCIA" : gerRaw;
+                
+                const ag = col[iAg], us = col[iUs], fec = col[iDi], mesId = col[iMe];
+                if(!ag || !fec) return;
+
+                setF.add(fec); 
+                setG.add(ger);
                 if(mesId) mesesDisp[mesId.toLowerCase()] = mesId.toLowerCase();
-                if (!dataGlobal[us]) dataGlobal[us] = { ag: col[iAg], us, ger, logs: {} };
+
+                if (!dataGlobal[us]) dataGlobal[us] = { ag, us, ger, logs: {} };
                 dataGlobal[us].logs[fec] = (dataGlobal[us].logs[fec] || 0) + t2s(col[iHr]);
             });
 
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
+            
+            document.getElementById('sel_ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + 
+                [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
+            
             document.getElementById('sel_mes').innerHTML = Object.keys(mesesDisp).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-            actualizarSelectorDias();
+            
+            llenarDias();
             render();
         }
 
-        function actualizarSelectorDias() {
+        function llenarDias() {
             const mesSel = document.getElementById('sel_mes').value;
-            const diasMes = fechasGlobal.filter(f => f.toLowerCase().includes(mesSel));
-            const selDia = document.getElementById('sel_dia');
-            selDia.innerHTML = '<option value="ALL">TODOS</option>' + 
-                diasMes.map(f => `<option value="${f}">${f.split('/')[0]}</option>`).join('');
+            const diasFilt = fechasGlobal.filter(f => f.toLowerCase().includes(mesSel));
+            let html = '<option value="ALL">TODOS LOS DÍAS</option>';
+            diasFilt.forEach(d => {
+                html += `<option value="${d}">${d.split('/')[0]}</option>`;
+            });
+            document.getElementById('sel_dia').innerHTML = html;
         }
 
         function render() {
             const mesSel = document.getElementById('sel_mes').value;
             const gerSel = document.getElementById('sel_ger').value;
             const diaSel = document.getElementById('sel_dia').value;
-            
-            let list = [], statsGer = {}, tendencia = {};
-            fechasGlobal.forEach(f => { if(f.toLowerCase().includes(mesSel)) tendencia[f] = 0; });
+
+            let list = [], statsGer = {};
 
             Object.values(dataGlobal).forEach(u => {
-                let sum = 0, boxes = "";
+                let sum = 0, on = 0, boxes = "";
                 fechasGlobal.forEach(f => {
+                    const s = u.logs[f] || 0; 
                     if(f.toLowerCase().includes(mesSel)) {
-                        const s = u.logs[f] || 0; 
-                        // FILTRO DE SUMA: Si hay día seleccionado, solo ese día. Si no, todo el mes.
+                        // Lógica de suma: Si hay día específico, solo ese día. Si no, todo el mes.
                         if(diaSel === "ALL" || f === diaSel) {
                             sum += s;
-                            if (gerSel === "ALL" || u.ger === gerSel) tendencia[f] += s;
-                        } else if (diaSel === "ALL" && (gerSel === "ALL" || u.ger === gerSel)) {
-                            tendencia[f] += s;
+                            if(s > 0) on++;
                         }
                         boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
                     }
                 });
 
-                if (sum > 0 || (diaSel === "ALL" && Object.keys(u.logs).some(k => k.toLowerCase().includes(mesSel)))) {
-                    if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
-                    statsGer[u.ger].horas += sum;
-                    if(sum > 0) statsGer[u.ger].ops++;
+                if (sum === 0 && diaSel !== "ALL") return;
+                if (sum === 0 && diaSel === "ALL") return;
+                
+                if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
+                statsGer[u.ger].horas += sum;
+                statsGer[u.ger].ops++;
 
-                    if (gerSel === "ALL" || u.ger === gerSel) {
-                        list.push({ ...u, sum, boxes });
-                    }
+                if (gerSel === "ALL" || u.ger === gerSel) {
+                    list.push({ ...u, sum, on, boxes });
                 }
             });
 
-            document.getElementById('label_total').innerText = diaSel === "ALL" ? "Total Horas Mes" : `Total Horas Día ${diaSel.split('/')[0]}`;
             const sGerArr = Object.entries(statsGer).sort((a,b) => a[1].horas - b[1].horas);
-
-            // CARDS
-            document.getElementById('cards_container').innerHTML = sGerArr.slice(-10).reverse().map(([name, data]) => `
-                <div class="p-4 card-stat">
+            
+            document.getElementById('cards_container').innerHTML = sGerArr.map(([name, data]) => `
+                <div class="p-5 card-stat">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
-                    <h3 class="text-lg font-black text-slate-800">${s2t(data.horas)}</h3>
-                    <p class="text-[9px] font-bold text-blue-600 mt-1">👤 ${data.ops} Ops</p>
-                </div>
-            `).join('');
+                    <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)} <span class="text-[10px] text-blue-500 font-bold">HRS</span></h3>
+                    <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase">👥 ${data.ops} Usuarios</p>
+                </div>`).join('');
 
             document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a, b) => a + b.sum, 0));
 
-            // TABLE
-            document.getElementById('table_body').innerHTML = list.sort((a,b)=>b.sum-a.sum).map(u => `
+            document.getElementById('table_body').innerHTML = list.map(u => `
                 <tr>
-                    <td class="p-4"><b>${u.ag}</b><br><span class="text-[9px] text-slate-400 font-mono">${u.us}</span></td>
-                    <td class="p-4 font-bold text-slate-500 text-[10px] uppercase">${u.ger}</td>
-                    <td class="p-4 flex flex-wrap justify-center gap-1">${u.boxes}</td>
+                    <td class="p-4"><p class="font-bold text-slate-700 uppercase">${u.ag}</p><p class="text-[9px] text-slate-400 font-mono">${u.us}</p></td>
+                    <td class="p-4 text-slate-500 font-bold text-[10px] uppercase">${u.ger}</td>
+                    <td class="p-4 flex flex-wrap gap-1 justify-center">${u.boxes}</td>
                     <td class="p-4 text-right font-black text-slate-700">${s2t(u.sum)}</td>
                 </tr>`).join('');
 
-            // CHART BARRAS (DINÁMICO)
-            Plotly.newPlot('chart_gerencias', [{
-                y: sGerArr.map(e => e[0]), x: sGerArr.map(e => (e[1].horas/3600).toFixed(1)),
-                type: 'bar', orientation: 'h', marker: { color: '#2563eb' },
+            // Gráfica actualizada según filtro
+            const traces = [{
+                y: sGerArr.map(e => e[0]), 
+                x: sGerArr.map(e => (e[1].horas/3600).toFixed(1)),
+                type: 'bar', orientation: 'h',
+                marker: { color: sGerArr.map((_, i) => `rgba(37, 99, 235, ${0.4 + (i / sGerArr.length) * 0.6})`), line: { color: '#1e3a8a', width: 1 } },
                 text: sGerArr.map(e => (e[1].horas/3600).toFixed(1) + " h"),
-                textposition: 'outside', cliponaxis: false
-            }], { 
-                title: { text: diaSel === "ALL" ? 'HORAS POR GERENCIA (MES)' : 'HORAS POR GERENCIA (DÍA)', font: {size:12, family:'Arial Black'} },
-                margin: {l:150, r:100, t:40, b:40}, xaxis: {fixedrange:true}, yaxis: {fixedrange:true} 
-            }, { staticPlot: true, responsive: true });
+                texttemplate: '%{text}', textposition: 'outside', cliponaxis: false
+            }];
 
-            // CHART TENDENCIA (DINÁMICO)
-            let xTend = Object.keys(tendencia).map(f => f.split('/')[0]);
-            let yTend = Object.values(tendencia).map(s => (s/3600).toFixed(1));
-            
-            Plotly.newPlot('chart_tendencia', [{
-                x: xTend, y: yTend,
-                type: 'scatter', mode: 'lines+markers', fill: 'tozeroy', line: { color: '#2563eb', shape: 'spline' }
-            }], { 
-                title: { text: 'TENDENCIA DE CONEXIÓN', font: {size:12, family:'Arial Black'} },
-                margin: {l:50, r:30, t:40, b:40}, xaxis: {fixedrange:true}, yaxis: {fixedrange:true} 
-            }, { staticPlot: true, responsive: true });
+            Plotly.newPlot('chart_gerencias', traces, {
+                title: { text: 'CONCENTRADO DE HORAS POR GERENCIA', font: { family: 'Arial Black', size: 14 } },
+                margin: {l:150, r:80, t:60, b:50},
+                xaxis: { fixedrange: true }, yaxis: { fixedrange: true },
+                dragmode: false
+            }, { responsive: true, staticPlot: true, displayModeBar: false });
         }
 
-        document.getElementById('sel_mes').addEventListener('change', () => { actualizarSelectorDias(); render(); });
+        document.getElementById('sel_mes').addEventListener('change', () => { llenarDias(); render(); });
         document.getElementById('sel_dia').addEventListener('change', render);
         document.getElementById('sel_ger').addEventListener('change', render);
     </script>
