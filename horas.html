@@ -96,55 +96,63 @@
         let rawData = [], fechasGlobal = [], alertasActuales = [];
 
         window.onload = async () => {
-            const cacheData = localStorage.getItem('gmt_audit_cache');
-            if(cacheData) { 
-                rawData = JSON.parse(cacheData); 
-                procesarFiltros(); 
-            } else { 
-                await cargarDesdeGitHub(); 
-            }
+            // No usamos cache al inicio para forzar la lectura del nuevo archivo siempre que se abra
+            await cargarDesdeGitHub();
         };
 
         async function cargarDesdeGitHub() {
             try {
+                // El timestamp "?t=" evita que GitHub sirva una versión vieja del archivo
                 const resp = await fetch(GITHUB_URL + "?t=" + new Date().getTime());
                 const texto = await resp.text();
-                const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 10);
-                const headers = lineas[0].toUpperCase().split(',');
                 
-                // MAPEADOR INTELIGENTE DE COLUMNAS (Ajustado para CNX y FECHA)
-                const findCol = (keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
+                // Dividir líneas y limpiar espacios
+                const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
+                if (lineas.length < 2) return;
+
+                const headers = lineas[0].toUpperCase().split(',').map(h => h.trim());
+                
+                // Buscador de columnas mejorado
+                const findCol = (possibleNames) => {
+                    return headers.findIndex(h => possibleNames.some(name => h === name || h.includes(name)));
+                };
 
                 const idx = {
-                    agente: findCol(["AGENTE", "NOMBRE"]),
-                    usuario: findCol(["USUARIO", "EMAIL"]),
-                    horas: findCol(["HORAS", "LOGUEO", "TIME"]),
-                    ger: findCol(["GERENCIA", "GERENTE"]),
-                    fec: findCol(["CNX", "FECHA"]),
+                    agente: findCol(["AGENTE"]),
+                    usuario: findCol(["USUARIO"]),
+                    horas: findCol(["HORAS", "LOGUEO"]),
+                    ger: findCol(["GERENCIA"]),
+                    fec: findCol(["FECHA", "CNX"]),
                     mes: findCol(["MES"])
                 };
 
                 rawData = lineas.slice(1).map(l => {
                     const c = l.split(',').map(v => v.trim());
+                    // Limpiamos la fecha por si trae hora (ej: 05/01/2026 09:48 -> 05/01/2026)
+                    let fechaLimpia = c[idx.fec] ? c[idx.fec].split(' ')[0] : "";
+                    
                     return {
                         agente: c[idx.agente] || "N/A", 
                         usuario: c[idx.usuario] || "N/A",
                         horas: t2s(c[idx.horas]), 
                         gerencia: (c[idx.ger] || "SIN GERENCIA").toUpperCase(),
-                        fecha: c[idx.fec]?.split(' ')[0], // Captura DD/MM/YYYY incluso si viene con hora
+                        fecha: fechaLimpia,
                         mes: (c[idx.mes] || "S/M").toLowerCase()
                     };
-                });
+                }).filter(r => r.agente !== "N/A");
 
-                localStorage.setItem('gmt_audit_cache', JSON.stringify(rawData));
                 procesarFiltros();
-            } catch (e) { console.error("Error cargando datos:", e); }
+            } catch (e) {
+                console.error("Error crítico:", e);
+                alert("Error al cargar el archivo de GitHub. Revisa la consola.");
+            }
         }
 
         function t2s(t) { 
-            if(!t) return 0;
+            if(!t || t === "0") return 0;
             const p = String(t).split(':'); 
-            return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0; 
+            if(p.length < 2) return 0;
+            return (+p[0]*3600) + (+p[1]*60) + (+p[2]||0); 
         }
 
         function s2t(s) { 
@@ -155,24 +163,29 @@
 
         function forzarSincronizacion() { 
             localStorage.clear(); 
-            location.reload(); 
+            location.reload(true); 
         }
 
         function procesarFiltros() {
             let setM = new Set(), setG = new Set(), setF = new Set();
             rawData.forEach(r => { 
-                if(r.mes) setM.add(r.mes); 
-                if(r.gerencia) setG.add(r.gerencia); 
-                if(r.fecha) setF.add(r.fecha); 
+                setM.add(r.mes); 
+                setG.add(r.gerencia); 
+                setF.add(r.fecha); 
             });
             
-            fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
+            fechasGlobal = [...setF].sort((a,b) => {
+                const da = a.split('/').reverse().join('');
+                const db = b.split('/').reverse().join('');
+                return da.localeCompare(db);
+            });
             
             document.getElementById('sel_mes').innerHTML = '<option value="ALL">🗓️ TODOS LOS MESES</option>' + [...setM].sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             document.getElementById('sel_ger').innerHTML = '<option value="ALL">👥 TODOS LOS GERENTES</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
             
-            document.getElementById('sel_mes').value = localStorage.getItem('l_mes') || 'ALL';
-            document.getElementById('sel_ger').value = localStorage.getItem('l_ger') || 'ALL';
+            document.getElementById('sel_mes').value = 'ALL';
+            document.getElementById('sel_ger').value = 'ALL';
+            
             actualizarDias();
             render();
         }
@@ -185,7 +198,6 @@
 
         function render() {
             const mSel = document.getElementById('sel_mes').value, dSel = document.getElementById('sel_dia').value, gSel = document.getElementById('sel_ger').value;
-            localStorage.setItem('l_mes', mSel); localStorage.setItem('l_ger', gSel);
 
             let filtrados = rawData.filter(r => (mSel === 'ALL' || r.mes === mSel) && (dSel === 'ALL' || r.fecha === dSel) && (gSel === 'ALL' || r.gerencia === gSel));
             let fActivas = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (mSel === 'ALL' || r.mes === mSel)));
@@ -221,7 +233,10 @@
                 </tr>`).join('');
 
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>b.total-a.total).map(u => {
-                let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
+                let bx = ""; 
+                fActivas.forEach(f => {
+                    bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`;
+                });
                 return `<tr>
                     <td class="p-4 font-bold text-slate-700">${u.agente}<br><span class="text-[9px] text-blue-500 font-black uppercase tracking-tighter">${u.usuario}</span></td>
                     <td class="p-4 text-[10px] font-black text-slate-400 uppercase">${u.ger}</td>
