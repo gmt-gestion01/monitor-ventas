@@ -36,10 +36,10 @@
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
                     <div class="bg-blue-600 px-3 py-1 rounded-lg text-white font-black italic text-xl">GMT</div>
-                    <h2 class="text-xs font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Horas / Usuario</span></h2>
+                    <h2 class="text-xs font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Filtro Inteligente</span></h2>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="descargarReporteCompleto()" class="bg-emerald-600 text-white text-[9px] font-bold uppercase px-4 py-2 rounded-xl shadow-sm hover:bg-emerald-700">Excel Detalle</button>
+                    <button onclick="descargarReporteCompleto()" class="bg-emerald-600 text-white text-[9px] font-bold uppercase px-4 py-2 rounded-xl shadow-sm hover:bg-emerald-700">Excel Detalle (Filtrado)</button>
                     <button onclick="forzarSincronizacion()" class="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">🔄 Sincronizar</button>
                 </div>
             </div>
@@ -178,7 +178,6 @@
             document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
-            // CARDS GERENTES
             document.getElementById('cards_container').innerHTML = Object.entries(statsG).sort((a,b)=>b[1].h-a[1].h).map(([nom, data]) => `
                 <div class="bg-white p-4 rounded-xl shadow-sm border card-stat text-center">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${nom}</p>
@@ -186,7 +185,6 @@
                     <p class="text-[9px] font-bold text-blue-500 italic">${data.n.size} Ejes.</p>
                 </div>`).join('');
 
-            // ALERTAS (RENDERIZADO CORREGIDO)
             alertasActuales = Object.values(porEje).filter(e => (fActivas.length - e.dias.size) >= 2);
             document.getElementById('alert_table_body').innerHTML = alertasActuales.map(e => `
                 <tr class="hover:bg-red-50">
@@ -196,7 +194,6 @@
                     <td class="p-2 text-right pr-4 font-bold">${s2t(e.total)}</td>
                 </tr>`).join('');
 
-            // TABLA DETALLE
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>b.total-a.total).map(u => {
                 let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
                 return `<tr>
@@ -208,44 +205,47 @@
             }).join('');
         }
 
-        // DESCARGA COMPLETA CORREGIDA
+        // DESCARGA COMPLETA OBEDECIENDO FILTROS
         function descargarReporteCompleto() {
-            let csv = "AGENTE,USUARIO,GERENCIA,HORAS_TOTALES,DIAS_CONECTADOS\n";
-            // Usamos porEje para tener los acumulados por persona
             const mSel = document.getElementById('sel_mes').value;
             const gSel = document.getElementById('sel_ger').value;
             
-            let resumen = {};
-            rawData.filter(r => (mSel === 'ALL' || r.mes === mSel) && (gSel === 'ALL' || r.gerencia === gSel)).forEach(r => {
-                if(!resumen[r.usuario]) resumen[r.usuario] = { a: r.agente, u: r.usuario, g: r.gerencia, h: 0, d: 0 };
-                resumen[r.usuario].h += r.horas;
-                resumen[r.usuario].d++;
-            });
+            // Filtramos la data antes de preparar el CSV
+            let filtradaDescarga = rawData.filter(r => 
+                (mSel === 'ALL' || r.mes === mSel) && 
+                (gSel === 'ALL' || r.gerencia === gSel)
+            );
 
-            Object.values(resumen).forEach(r => {
-                csv += `"${r.a}","${r.u}","${r.g}","${s2t(r.h)}",${r.d}\n`;
+            if(filtradaDescarga.length === 0) return alert("No hay datos para los filtros seleccionados");
+
+            let csv = "AGENTE,USUARIO,GERENCIA,FECHA,HORAS,MES\n";
+            filtradaDescarga.forEach(r => {
+                csv += `"${r.agente}","${r.usuario}","${r.gerencia}","${r.fecha}","${s2t(r.horas)}","${r.mes.toUpperCase()}"\n`;
             });
 
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `Reporte_Auditoria_GMT_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `Auditoria_GMT_${mSel.toUpperCase()}_${gSel.replace(/ /g,'_')}.csv`;
             link.click();
         }
 
-        // DESCARGA DE ALERTAS CORREGIDA
+        // DESCARGA DE ALERTAS OBEDECIENDO FILTROS
         function descargarAlertas() {
-            let csv = "AGENTE,USUARIO,GERENCIA,DIAS_OFF,HORAS_ACUMULADAS\n";
+            const mSel = document.getElementById('sel_mes').value;
+            if(alertasActuales.length === 0) return alert("No hay alertas en la selección actual");
+
+            let csv = "AGENTE,USUARIO,GERENCIA,DIAS_OFF,HORAS_ACUMULADAS,MES_AUDITADO\n";
             alertasActuales.forEach(e => {
-                const mSel = document.getElementById('sel_mes').value;
                 const totalDiasMes = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (mSel === 'ALL' || r.mes === mSel))).length;
                 const dOff = totalDiasMes - e.dias.size;
-                csv += `"${e.agente}","${e.usuario}","${e.ger}",${dOff},"${s2t(e.total)}"\n`;
+                csv += `"${e.agente}","${e.usuario}","${e.ger}",${dOff},"${s2t(e.total)}","${mSel.toUpperCase()}"\n`;
             });
+
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "Alertas_Ausentismo_GMT.csv";
+            link.download = `Alertas_OFF_${mSel.toUpperCase()}.csv`;
             link.click();
         }
 
