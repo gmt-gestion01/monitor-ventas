@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT AUDIT | Final</title>
+    <title>GMT AUDIT | Final Pro</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -27,7 +27,7 @@
                     <div class="bg-blue-600 px-2 py-0.5 rounded text-white font-black italic text-lg">GMT</div>
                     <h2 class="text-xs font-black uppercase tracking-tighter">Auditoría <span class="text-blue-600">Conexión</span></h2>
                 </div>
-                <button onclick="cargarDesdeGitHub()" class="text-blue-600 text-[10px] font-bold uppercase border border-blue-100 px-2 py-1 rounded">🔄 Actualizar</button>
+                <button onclick="cargarDesdeGitHub()" class="text-blue-600 text-[10px] font-bold uppercase border border-blue-100 px-2 py-1 rounded">🔄 Actualizar Data</button>
             </div>
             <div class="grid grid-cols-2 gap-2">
                 <select id="sel_mes" class="bg-slate-50 border p-2 rounded-lg font-bold text-[11px] outline-none"></select>
@@ -51,10 +51,10 @@
 
         <div class="space-y-3 mb-3">
             <div class="bg-white p-2 rounded-xl border shadow-sm">
-                <div id="chart_tendencia" style="height: 280px; width: 100%;"></div>
+                <div id="chart_tendencia" style="height: 280px;"></div>
             </div>
             <div class="bg-white p-2 rounded-xl border shadow-sm">
-                <div id="chart_gerencias" style="height: 350px; width: 100%;"></div>
+                <div id="chart_gerencias" style="height: 350px;"></div>
             </div>
         </div>
 
@@ -153,7 +153,7 @@
             // TARJETAS
             document.getElementById('cards_container').innerHTML = Object.entries(statsG).sort((a,b)=>b[1].h-a[1].h).map(([n, d]) => `
                 <div class="p-2 card-stat shadow-sm">
-                    <p class="text-[7px] font-black text-slate-400 uppercase truncate">${n}</p>
+                    <p class="text-[7px] font-black text-slate-400 uppercase truncate mb-1">${n}</p>
                     <h3 class="text-[11px] font-black">${s2t(d.h)}</h3>
                     <p class="text-[7px] text-blue-500 font-bold">${d.n.size} Activos</p>
                 </div>`).join('');
@@ -176,26 +176,33 @@
             document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
-            // GRÁFICAS (RE-RENDER FORZADO)
-            setTimeout(() => {
-                const lay = { dragmode: false, xaxis: { fixedrange: true, tickfont:{size:9} }, yaxis: { fixedrange: true }, margin: { l:40, r:20, t:40, b:40 } };
-                
-                Plotly.newPlot('chart_tendencia', [{
-                    x: Object.keys(tendencia).map(f=>f.split('/')[0]), 
-                    y: Object.values(tendencia).map(s=>(s/3600).toFixed(1)), 
-                    type: 'scatter', mode: 'lines+markers+text', 
-                    text: Object.values(tendencia).map(s=>(s/3600).toFixed(1)),
-                    textposition: 'top center', line: { color: '#2563eb' }
-                }], { ...lay, title: {text:'TENDENCIA HORAS', font:{size:11, weight:'bold'}} }, { responsive: true, displayModeBar: false });
+            // RENDER GRÁFICAS
+            const layoutBase = { dragmode: false, xaxis: { fixedrange: true, tickfont:{size:9} }, yaxis: { fixedrange: true }, margin: { l:40, r:30, t:40, b:40 }, font: {family: 'Inter'} };
 
-                const sG = Object.entries(statsG).sort((a,b)=>a[1].h-b[1].h);
-                Plotly.newPlot('chart_gerencias', [{ 
-                    y: sG.map(e=>e[0]), x: sG.map(e=>(e[1].h/3600).toFixed(1)), 
-                    type: 'bar', orientation: 'h', 
-                    text: sG.map(e=>(e[1].h/3600).toFixed(1) + 'h'), textposition: 'outside',
-                    marker: { color: '#2563eb' } 
-                }], { ...lay, title: {text:'GERENCIA TOTAL', font:{size:11, weight:'bold'}}, margin: {l:100, r:40, t:40, b:40} }, { responsive: true, displayModeBar: false });
-            }, 100);
+            // 1. TENDENCIA
+            const dataTendencia = [{
+                x: Object.keys(tendencia).map(f=>f.split('/')[0]),
+                y: Object.values(tendencia).map(s=>(s/3600).toFixed(1)),
+                type: 'scatter', mode: 'lines+markers+text',
+                text: Object.values(tendencia).map(s=>(s/3600).toFixed(1)),
+                textposition: 'top center',
+                line: { color: '#2563eb', width: 3 },
+                marker: { size: 7, color: '#1e40af' }
+            }];
+            Plotly.newPlot('chart_tendencia', dataTendencia, { ...layoutBase, title: {text:'HORAS POR DÍA', font:{size:11, weight:'bold'}} }, { responsive: true, displayModeBar: false });
+
+            // 2. GERENCIAS (FORZADA)
+            const sG = Object.entries(statsG).sort((a,b)=>a[1].h-b[1].h);
+            const dataGerencias = [{
+                y: sG.map(e=>e[0]),
+                x: sG.map(e=>(e[1].h/3600).toFixed(1)),
+                type: 'bar',
+                orientation: 'h',
+                text: sG.map(e=>(e[1].h/3600).toFixed(1) + 'h'),
+                textposition: 'outside',
+                marker: { color: '#2563eb', line: {width: 1, color: '#1e40af'} }
+            }];
+            Plotly.newPlot('chart_gerencias', dataGerencias, { ...layoutBase, title: {text:'TOTAL POR GERENTE', font:{size:11, weight:'bold'}}, margin: {l:120, r:40, t:40, b:40} }, { responsive: true, displayModeBar: false });
         }
 
         function descargarAlertas() {
