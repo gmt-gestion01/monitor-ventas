@@ -12,6 +12,8 @@
         .day-box { width: 14px; height: 14px; border-radius: 2px; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
+        .card-stat { border-top: 4px solid #2563eb; transition: transform 0.2s; }
+        .card-stat:hover { transform: translateY(-2px); }
         .scroll-custom::-webkit-scrollbar { width: 4px; }
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -37,13 +39,15 @@
                     <div class="bg-blue-600 px-3 py-1 rounded-lg text-white font-black italic text-xl">GMT</div>
                     <h2 class="text-xs font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Horas</span></h2>
                 </div>
-                <button onclick="forzarSincronizacion()" class="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">🔄 Sincronizar Base</button>
+                <button onclick="forzarSincronizacion()" class="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-4 py-2 rounded-xl border border-blue-100">🔄 Actualizar Datos</button>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <select id="sel_mes" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs outline-none"></select>
                 <select id="sel_dia" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs outline-none"></select>
             </div>
         </div>
+
+        <div id="cards_container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3"></div>
 
         <div class="grid grid-cols-1 gap-3 mb-3">
             <div class="bg-white p-4 rounded-2xl border shadow-sm">
@@ -62,9 +66,9 @@
                 <table class="w-full text-[11px] text-left">
                     <thead class="bg-slate-100 text-slate-500 font-bold uppercase sticky top-0 z-10">
                         <tr>
-                            <th class="p-4 border-b">Agente / Gerencia</th>
-                            <th class="p-4 text-center border-b">Calendario</th>
-                            <th class="p-4 text-right border-b">Total Hrs</th>
+                            <th class="p-4">Agente / Gerencia</th>
+                            <th class="p-4 text-center">Calendario</th>
+                            <th class="p-4 text-right">Total Hrs</th>
                         </tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
@@ -114,7 +118,7 @@
 
                 localStorage.setItem('gmt_data', JSON.stringify(rawData));
                 procesarFiltros();
-            } catch (e) { alert("Error al cargar datos."); }
+            } catch (e) { console.error(e); }
         }
 
         function forzarSincronizacion() {
@@ -174,48 +178,55 @@
                 if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, ger: r.gerencia, total: 0, dias: new Set() };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
-                if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0 };
+                
+                if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
                 statsG[r.gerencia].h += r.horas;
+                statsG[r.gerencia].n.add(r.usuario);
+                
                 if(tendencia.hasOwnProperty(r.fecha)) tendencia[r.fecha] += r.horas;
             });
 
             document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
+            // RENDER TARJETAS
+            document.getElementById('cards_container').innerHTML = Object.entries(statsG).sort((a,b)=>b[1].h-a[1].h).map(([nom, data]) => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border card-stat text-center">
+                    <p class="text-[9px] font-black text-slate-400 uppercase truncate">${nom}</p>
+                    <p class="text-xl font-black text-slate-800">${s2t(data.h)}</p>
+                    <p class="text-[9px] font-bold text-blue-500 italic">${data.n.size} Ejes.</p>
+                </div>
+            `).join('');
+
             // TABLA
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>a.total-b.total).map(u => {
                 let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
-                return `<tr><td class="p-4"><span class="font-black">${u.agente}</span><br><span class="text-[8px] text-slate-400 font-bold">${u.ger}</span></td><td class="p-4 flex flex-wrap justify-center gap-px">${bx}</td><td class="p-4 text-right font-black text-blue-600">${s2t(u.total)}</td></tr>`;
+                return `<tr><td class="p-4"><span class="font-bold">${u.agente}</span><br><span class="text-[8px] text-slate-400 font-bold uppercase">${u.ger}</span></td><td class="p-4 flex flex-wrap justify-center gap-px">${bx}</td><td class="p-4 text-right font-black text-blue-600">${s2t(u.total)}</td></tr>`;
             }).join('');
 
             // GRÁFICAS
             setTimeout(() => {
-                // TENDENCIA
                 Plotly.newPlot('chart_tendencia', [{
                     x: Object.keys(tendencia).map(f => f.split('/')[0]),
                     y: Object.values(tendencia).map(s => (s/3600).toFixed(1)),
                     type: 'scatter', mode: 'lines+markers+text',
                     text: Object.values(tendencia).map(s => (s/3600).toFixed(1)),
-                    textposition: 'top center', line: { color: '#2563eb', width: 3 }
-                }], { margin: { l:30, r:20, t:50, b:40 }, title: '<b>TENDENCIA DIARIA (HRS)</b>' }, {responsive:true, displayModeBar:false});
+                    textposition: 'top center', line: { color: '#2563eb' }
+                }], { margin: { l:30, r:20, t:50, b:40 }, title: '<b>TENDENCIA HORAS</b>' }, {responsive:true, displayModeBar:false});
 
-                // GERENCIAS - CORRECCIÓN DE ETIQUETAS Y MARGEN
                 const sG = Object.entries(statsG).sort((a,b) => a[1].h - b[1].h);
                 const xBar = sG.map(e => (e[1].h/3600).toFixed(1));
                 
                 Plotly.newPlot('chart_gerencias', [{
-                    y: sG.map(e => e[0]), 
-                    x: xBar,
+                    y: sG.map(e => e[0]), x: xBar,
                     type: 'bar', orientation: 'h', 
                     text: xBar.map(v => v + ' h'),
-                    textposition: 'outside', 
-                    textfont: { size: 11, weight: 'bold' },
-                    marker: { color: '#2563eb' },
+                    textposition: 'outside', marker: { color: '#2563eb' },
                     cliponaxis: false
                 }], { 
-                    margin: { l:140, r:100, t:50, b:50 }, // Aumento de margen derecho (r:100)
+                    margin: { l:140, r:100, t:50, b:50 }, 
                     title: '<b>TOTAL POR GERENTE</b>',
-                    xaxis: { showgrid: true, gridcolor: '#f1f5f9', zeroline: false }
+                    xaxis: { showgrid: true, gridcolor: '#f1f5f9' }
                 }, {responsive:true, displayModeBar:false});
             }, 400);
         }
