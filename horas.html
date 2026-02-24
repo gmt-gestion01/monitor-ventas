@@ -82,18 +82,15 @@
     </div>
 
     <script>
-        /* CONFIGURACIÓN: URL de la fuente de datos en GitHub */
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
         let rawData = [], fechasGlobal = [], alertasActuales = [];
 
-        /* LÓGICA: Al cargar, verifica si hay datos en caché para no descargar de nuevo innecesariamente */
         window.onload = async () => {
             const cacheData = localStorage.getItem('gmt_data');
             if(cacheData) { rawData = JSON.parse(cacheData); procesarFiltros(); } 
             else { await cargarDesdeGitHub(); }
         };
 
-        /* LÓGICA: Descarga y parseo del CSV. Mapea las columnas sin importar su orden exacto */
         async function cargarDesdeGitHub() {
             try {
                 const resp = await fetch(GITHUB_URL + "?t=" + new Date().getTime());
@@ -121,14 +118,10 @@
             } catch (e) { console.error("Error cargando base:", e); }
         }
 
-        /* LÓGICA: Sincronización manual: Borra caché y recarga la página */
         function forzarSincronizacion() { localStorage.clear(); location.reload(); }
-
-        /* UTILIDADES: Conversión de Tiempo (HH:MM:SS a Segundos y viceversa) */
         function t2s(t) { const p = String(t).split(':'); return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0; }
         function s2t(s) { const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); return `${h}:${m.toString().padStart(2,'0')}`; }
 
-        /* LÓGICA: Llena los selectores de Mes, Día y Gerente basándose en la data real */
         function procesarFiltros() {
             let setM = new Set(), setG = new Set(), setF = new Set();
             rawData.forEach(r => { setM.add(r.mes); setG.add(r.gerencia); setF.add(r.fecha); });
@@ -137,7 +130,6 @@
             document.getElementById('sel_mes').innerHTML = '<option value="ALL">🗓️ TODOS LOS MESES</option>' + [...setM].sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             document.getElementById('sel_ger').innerHTML = '<option value="ALL">👥 TODOS LOS GERENTES</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
             
-            /* Persistencia: Recupera la última selección que hizo el usuario */
             document.getElementById('sel_mes').value = localStorage.getItem('last_mes') || 'ALL';
             document.getElementById('sel_ger').value = localStorage.getItem('last_ger') || 'ALL';
             actualizarDias();
@@ -145,46 +137,42 @@
             render();
         }
 
-        /* LÓGICA: Actualiza dinámicamente el filtro de días según el mes seleccionado */
         function actualizarDias() {
             const m = document.getElementById('sel_mes').value;
             const diasF = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (m === 'ALL' || r.mes === m)));
             document.getElementById('sel_dia').innerHTML = '<option value="ALL">📅 TODOS LOS DÍAS</option>' + diasF.map(f => `<option value="${f}">${f}</option>`).join('');
         }
 
-        /* MOTOR PRINCIPAL: Filtra datos y dibuja TODO en la pantalla */
         function render() {
             const mSel = document.getElementById('sel_mes').value, dSel = document.getElementById('sel_dia').value, gSel = document.getElementById('sel_ger').value;
-            // Guardamos filtros actuales para la próxima vez que entre
             localStorage.setItem('last_mes', mSel); localStorage.setItem('last_dia', dSel); localStorage.setItem('last_ger', gSel);
 
-            // Filtrado principal de la matriz de datos
+            // Filtrado principal
             let filtrados = rawData.filter(r => (mSel === 'ALL' || r.mes === mSel) && (dSel === 'ALL' || r.fecha === dSel) && (gSel === 'ALL' || r.gerencia === gSel));
             let fActivas = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (mSel === 'ALL' || r.mes === mSel)));
 
             let porEje = {}, statsG = {}, tendenciaAgrupada = {};
-            for(let i=1; i<=31; i++) tendenciaAgrupada[i] = 0; // Inicializamos contador de días del mes
+            for(let i=1; i<=31; i++) tendenciaAgrupada[i] = 0; 
 
             filtrados.forEach(r => {
-                // Cálculo de Tendencia: Agrupamos por el NÚMERO DE DÍA (ej. 01, 02) para sumar totales globales
+                // Cálculo de Tendencia (Suma por día de calendario)
                 const diaNum = parseInt(r.fecha.split('/')[0]);
                 if(tendenciaAgrupada.hasOwnProperty(diaNum)) tendenciaAgrupada[diaNum] += r.horas;
 
-                // Estructura para tabla por agente
+                // Estructura por agente
                 if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, ger: r.gerencia, total: 0, dias: new Set() };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
                 
-                // Estructura para tarjetas y ranking de gerentes
+                // Estructura para Ranking (Aplica datos generales si mSel es ALL)
                 if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
                 statsG[r.gerencia].h += r.horas; statsG[r.gerencia].n.add(r.usuario);
             });
 
-            // Actualización de KPIs superiores
             document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
-            // DIBUJADO DE ALERTAS: Filtra quién debe 2 o más días
+            // DIBUJADO DE ALERTAS
             alertasActuales = Object.values(porEje).filter(e => (fActivas.length - e.dias.size) >= 2);
             document.getElementById('alert_table_body').innerHTML = alertasActuales.map(e => `
                 <tr class="hover:bg-red-50">
@@ -193,7 +181,7 @@
                     <td class="p-3 text-right pr-4 font-bold">${s2t(e.total)}</td>
                 </tr>`).join('');
 
-            // DIBUJADO DE TARJETAS: Genera bloques visuales por cada gerente
+            // DIBUJADO DE TARJETAS
             document.getElementById('cards_container').innerHTML = Object.entries(statsG).sort((a,b)=>b[1].h-a[1].h).map(([nom, data]) => `
                 <div class="bg-white p-4 rounded-xl shadow-sm border card-stat text-center">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${nom}</p>
@@ -201,17 +189,16 @@
                     <p class="text-[9px] font-bold text-blue-500 italic">${data.n.size} Ejes.</p>
                 </div>`).join('');
 
-            // DIBUJADO DE TABLA: Lista agentes y pinta los cuadritos azules de asistencia
+            // DIBUJADO DE TABLA
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>a.total-b.total).map(u => {
                 let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
                 return `<tr><td class="p-4 font-bold">${u.agente}<br><span class="text-[8px] text-slate-400 font-bold uppercase">${u.ger}</span></td><td class="p-4 flex flex-wrap justify-center gap-px">${bx}</td><td class="p-4 text-right font-black text-blue-600">${s2t(u.total)}</td></tr>`;
             }).join('');
 
-            // BLOQUE: DIBUJO DE GRÁFICAS (Se ejecuta con un pequeño retraso para asegurar que el diseño cargue primero)
             setTimeout(() => {
                 const config = { responsive: true, displayModeBar: false };
                 
-                // GRÁFICA TENDENCIA: Configurada con margen superior extra para que no se encime el texto
+                // GRÁFICA TENDENCIA (GENERALIZADA)
                 const xTicks = Object.keys(tendenciaAgrupada).filter(d => tendenciaAgrupada[d] > 0);
                 const yVals = xTicks.map(d => (tendenciaAgrupada[d]/3600).toFixed(1));
                 const maxTen = Math.max(...yVals);
@@ -225,10 +212,10 @@
                 }], { 
                     margin: { l:50, r:50, t:80, b:50 }, 
                     title: '<b>RENDIMIENTO POR DÍA CALENDARIO (TOTAL HORAS)</b>',
-                    yaxis: { range: [0, maxTen * 1.35], showgrid: true } // 35% de espacio extra arriba
+                    yaxis: { range: [0, maxTen * 1.35], showgrid: true }
                 }, config);
 
-                // GRÁFICA GERENCIAS: Configurada con margen derecho amplio para las etiquetas de texto
+                // GRÁFICA GERENCIAS (RANKING GENERALIZADO)
                 const sG = Object.entries(statsG).sort((a,b) => a[1].h - b[1].h);
                 const xBar = sG.map(e => (e[1].h/3600).toFixed(1));
                 const maxBar = Math.max(...xBar);
@@ -239,13 +226,12 @@
                     cliponaxis: false, marker: { color: '#2563eb' }
                 }], { 
                     margin: { l:140, r:120, t:60, b:50 }, 
-                    title: '<b>TOTAL ACUMULADO POR GERENTE</b>',
-                    xaxis: { range: [0, maxBar * 1.3], showgrid: true } // 30% de espacio extra a la derecha
+                    title: '<b>TOTAL ACUMULADO POR GERENTE (VISTA GENERAL)</b>',
+                    xaxis: { range: [0, maxBar * 1.3], showgrid: true } 
                 }, config);
             }, 450);
         }
 
-        /* LÓGICA: Genera un archivo CSV con las personas que tienen alertas para descargar */
         function descargarAlertas() {
             let csv = "Agente,Dias_OFF,Horas\n";
             alertasActuales.forEach(e => {
@@ -259,7 +245,6 @@
             link.click();
         }
 
-        /* ESCUCHADORES: Detectan cambios en los filtros para redibujar todo */
         document.getElementById('sel_mes').addEventListener('change', () => { actualizarDias(); render(); });
         document.getElementById('sel_dia').addEventListener('change', render);
         document.getElementById('sel_ger').addEventListener('change', render);
