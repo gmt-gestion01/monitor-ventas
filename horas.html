@@ -2,70 +2,95 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>GMT AUDIT | Performance Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMT AUDIT | Dashboard Gerencial</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .day-box { width: 22px; height: 22px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
-        .spr-high { background-color: #2563eb; color: white; border: 1px solid #1e40af; }
-        .day-off { background-color: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
-        .card-alert { border-left: 5px solid #ef4444; background-color: #fef2f2; }
-        .card-stat { border-left: 5px solid #2563eb; background: white; }
+        .day-box { width: 20px; height: 20px; border-radius: 4px; font-size: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
+        .spr-high { background-color: #2563eb; color: white; }
+        .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
+        .card-gerente { border-left: 4px solid #2563eb; transition: transform 0.2s; }
+        .card-gerente:hover { transform: translateY(-3px); }
+        body { background-color: #f8fafc; }
     </style>
 </head>
-<body class="p-4 bg-slate-50">
+<body class="p-4">
 
     <div class="max-w-[1600px] mx-auto">
-        <div class="bg-white p-6 rounded-3xl shadow-sm border mb-6 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center gap-4">
-                <div class="bg-blue-600 p-3 rounded-2xl text-white font-black italic">GMT</div>
-                <h1 class="text-xl font-black uppercase">Auditoría <span class="text-blue-600">Performance</span></h1>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white font-bold text-lg">GMT</div>
+                <h1 class="text-lg font-black uppercase tracking-tight">Panel de <span class="text-blue-600">Auditoría</span></h1>
             </div>
-            <div class="flex gap-4">
-                <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="cargarLocal(event)">
-                <button onclick="document.getElementById('csvFile').click()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase">Subir Archivo Local</button>
-                <select id="sel_mes" class="border p-2 rounded-xl font-bold text-sm outline-none shadow-sm min-w-[120px]"></select>
-                <button onclick="cargarDesdeGitHub()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-blue-700">Actualizar GitHub</button>
+            <div class="flex gap-2">
+                <select id="sel_mes" class="border p-2 rounded-lg font-bold text-xs uppercase outline-none"></select>
+                <button onclick="cargarDatos()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Refrescar</button>
             </div>
         </div>
 
-        <div id="cards_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"></div>
+        <div id="cards_gerentes" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-3xl border shadow-sm"><div id="chart_gerencias" style="height: 350px;"></div></div>
-            <div class="bg-white p-6 rounded-3xl border shadow-sm"><div id="chart_tendencia" style="height: 350px;"></div></div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+                <div id="plot_barras" style="height: 350px;"></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border shadow-sm">
+                <div id="plot_tendencia" style="height: 350px;"></div>
+            </div>
         </div>
 
-        <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
-            <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
-                <select id="sel_ger" class="p-3 rounded-xl border font-bold text-slate-700 uppercase outline-none bg-white shadow-sm w-64"></select>
+        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                <select id="filter_gerencia" class="p-2 border rounded-lg text-xs font-bold uppercase w-64"></select>
                 <div class="text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase">Suma Total de Horas</p>
-                    <p class="text-3xl font-black text-blue-600" id="kpi_sum_hrs">0:00</p>
+                    <span class="text-[10px] text-slate-400 font-bold block uppercase">Total Horas Filtro</span>
+                    <span id="total_horas_txt" class="text-xl font-black text-blue-600">00:00:00</span>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-[11px]">
-                    <thead class="bg-white border-b text-slate-400 font-bold uppercase">
+            <div class="overflow-x-auto max-h-[500px]">
+                <table class="w-full text-[11px]">
+                    <thead class="sticky top-0 bg-white border-b text-slate-400 font-bold uppercase text-left">
                         <tr>
-                            <th class="p-5">Agente / Usuario</th>
-                            <th class="p-5">Gerencia</th>
-                            <th class="p-5 text-center">Conexión por Día</th>
-                            <th class="p-5 text-right">Hrs Totales</th>
+                            <th class="p-4">Agente</th>
+                            <th class="p-4">Gerencia</th>
+                            <th class="p-4 text-center">Asistencia Diaria</th>
+                            <th class="p-4 text-right">Total Hrs</th>
                         </tr>
                     </thead>
-                    <tbody id="table_body" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="tabla_body" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
-        let dataGlobal = {}, fechasGlobal = [], mesesDisp = {};
+        const URL_DATA = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
+        let rawData = [], fechasUnicas = [], gerentesUnicos = [];
+
+        async function cargarDatos() {
+            try {
+                const resp = await fetch(URL_DATA);
+                const text = await resp.text();
+                const rows = text.split('\n').slice(1);
+                rawData = rows.map(r => {
+                    const c = r.split(text.includes(';') ? ';' : ',');
+                    if(c.length < 9) return null;
+                    return {
+                        agente: c[0], usuario: c[1], horas: c[2], 
+                        gerente: (c[4] || "SIN GERENCIA").trim().toUpperCase(),
+                        dia: c[7], mes: (c[8] || "").trim().toLowerCase()
+                    };
+                }).filter(r => r);
+
+                const meses = [...new Set(rawData.map(r => r.mes))].sort();
+                document.getElementById('sel_mes').innerHTML = meses.map(m => `<option value="${m}">${m}</option>`).join('');
+                
+                procesarFiltros();
+            } catch (e) { console.error("Error cargando CSV"); }
+        }
 
         function t2s(t) {
-            if(!t) return 0;
             const p = t.split(':');
             return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0;
         }
@@ -76,122 +101,101 @@
             return `${h}:${m.toString().padStart(2,'0')}`;
         }
 
-        async function cargarDesdeGitHub() {
-            try {
-                const response = await fetch(GITHUB_URL);
-                const csvText = await response.text();
-                procesarCSV(csvText);
-            } catch (err) { alert("Error al conectar con GitHub. Intenta subir el archivo localmente."); }
-        }
-
-        function cargarLocal(event) {
-            const reader = new FileReader();
-            reader.onload = (e) => procesarCSV(e.target.result);
-            reader.readAsText(event.target.files[0]);
-        }
-
-        function procesarCSV(csv) {
-            const lineas = csv.split(/\r?\n/).filter(l => l.trim().length > 10);
-            const sep = lineas[0].includes(';') ? ';' : ',';
+        function procesarFiltros() {
+            const mesAct = document.getElementById('sel_mes').value;
+            const dataMes = rawData.filter(r => r.mes === mesAct);
             
-            // Índices basados en tu archivo 
-            const iAg = 0, iUs = 1, iHr = 2, iGe = 4, iDi = 7, iMe = 8;
+            fechasUnicas = [...new Set(dataMes.map(r => r.dia))].sort((a,b) => a.localeCompare(b));
+            gerentesUnicos = [...new Set(dataMes.map(r => r.gerente))].sort();
 
-            dataGlobal = {}; fechasGlobal = []; let setF = new Set(), setG = new Set();
-            mesesDisp = {};
+            document.getElementById('filter_gerencia').innerHTML = '<option value="ALL">TODOS LOS GERENTES</option>' + 
+                gerentesUnicos.map(g => `<option value="${g}">${g}</option>`).join('');
 
-            lineas.slice(1).forEach(l => {
-                const col = l.split(sep).map(c => c.trim());
-                if(col.length < 8) return;
+            renderDashboard();
+        }
 
-                let ger = (col[iGe] || "SIN GERENCIA").toUpperCase();
-                if(ger === "UNDEFINED" || ger === "") ger = "SIN GERENCIA";
-                
-                const us = col[iUs], fec = col[iDi], mes = (col[iMe] || "desconocido").toLowerCase();
-                
-                setF.add(fec); setG.add(ger);
-                mesesDisp[mes] = mes;
+        function renderDashboard() {
+            const mesAct = document.getElementById('sel_mes').value;
+            const gerFiltro = document.getElementById('filter_gerencia').value;
+            const dataMes = rawData.filter(r => r.mes === mesAct);
 
-                if (!dataGlobal[us]) dataGlobal[us] = { ag: col[iAg], us, ger, logs: {} };
-                dataGlobal[us].logs[fec] = (dataGlobal[us].logs[fec] || 0) + t2s(col[iHr]);
+            let resumenAgentes = {};
+            let resumenGerentes = {};
+            let tendenciaDiaria = {};
+
+            // Inicializar tendencia
+            fechasUnicas.forEach(f => tendenciaDiaria[f] = 0);
+
+            dataMes.forEach(r => {
+                const s = t2s(r.horas);
+                // Agentes
+                if(!resumenAgentes[r.usuario]) {
+                    resumenAgentes[r.usuario] = { nombre: r.agente, gerente: r.gerente, total: 0, dias: {} };
+                }
+                resumenAgentes[r.usuario].total += s;
+                resumenAgentes[r.usuario].dias[r.dia] = s;
+
+                // Gerentes
+                if(!resumenGerentes[r.gerente]) resumenGerentes[r.gerente] = { total: 0, count: 0 };
+                resumenGerentes[r.gerente].total += s;
+                resumenGerentes[r.gerente].count++;
+
+                // Tendencia (aplica filtro de gerente)
+                if(gerFiltro === "ALL" || r.gerente === gerFiltro) {
+                    tendenciaDiaria[r.dia] += s;
+                }
             });
 
-            fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-            
-            const selGer = document.getElementById('sel_ger');
-            selGer.innerHTML = '<option value="ALL">VISTA GLOBAL</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
-            
-            const selMes = document.getElementById('sel_mes');
-            selMes.innerHTML = Object.keys(mesesDisp).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-            
-            render();
-        }
-
-        function render() {
-            const mesSel = document.getElementById('sel_mes').value;
-            const gerSel = document.getElementById('sel_ger').value;
-            let list = [], statsGer = {}, tendencia = {};
-
-            fechasGlobal.forEach(f => { if(f.toLowerCase().includes(mesSel) || !mesSel) tendencia[f] = 0; });
-
-            Object.values(dataGlobal).forEach(u => {
-                let sum = 0, diasOn = 0, boxes = "";
-                fechasGlobal.forEach(f => {
-                    const diaMes = f.split('/')[0];
-                    if(f.toLowerCase().includes(mesSel) || !mesSel) {
-                        const s = u.logs[f] || 0; 
-                        sum += s;
-                        if(s > 0) diasOn++;
-                        boxes += `<div class="day-box ${s > 0 ? 'spr-high' : 'day-off'}">${diaMes}</div>`;
-                        if (gerSel === "ALL" || u.ger === gerSel) tendencia[f] += s;
-                    }
-                });
-
-                if (sum === 0) return;
-                if(!statsGer[u.ger]) statsGer[u.ger] = { horas: 0, ops: 0 };
-                statsGer[u.ger].horas += sum;
-                statsGer[u.ger].ops++;
-
-                if (gerSel === "ALL" || u.ger === gerSel) list.push({ ...u, sum, boxes, diasOn });
-            });
-
-            // RENDER CARDS
-            const sGerArr = Object.entries(statsGer).sort((a,b) => b[1].horas - a[1].horas);
-            document.getElementById('cards_container').innerHTML = sGerArr.slice(0,5).map(([name, data]) => `
-                <div class="p-5 rounded-2xl shadow-sm border ${name === 'SIN GERENCIA' ? 'card-alert' : 'card-stat'}">
-                    <p class="text-[9px] font-black text-slate-400 uppercase truncate">${name}</p>
-                    <h3 class="text-xl font-black text-slate-800">${s2t(data.horas)}h</h3>
-                    <p class="text-[9px] font-bold text-blue-600 mt-1 uppercase">👤 ${data.ops} Agentes</p>
+            // Cards Gerentes
+            const sortedGer = Object.entries(resumenGerentes).sort((a,b) => b[1].total - a[1].total);
+            document.getElementById('cards_gerentes').innerHTML = sortedGer.slice(0, 10).map(([nom, d]) => `
+                <div class="bg-white p-3 rounded-xl border shadow-sm card-gerente">
+                    <p class="text-[8px] font-bold text-slate-400 uppercase truncate">${nom}</p>
+                    <p class="text-sm font-black text-slate-700">${s2t(d.total)}h</p>
+                    <p class="text-[8px] text-blue-500 font-bold">${d.count} Ops</p>
                 </div>
             `).join('');
 
-            document.getElementById('kpi_sum_hrs').innerText = s2t(list.reduce((a, b) => a + b.sum, 0));
+            // Tabla
+            const agentesFiltrados = Object.values(resumenAgentes)
+                .filter(a => gerFiltro === "ALL" || a.gerente === gerFiltro)
+                .sort((a,b) => b.total - a.total);
 
-            // RENDER TABLE
-            document.getElementById('table_body').innerHTML = list.map(u => `
-                <tr>
-                    <td class="p-4"><b>${u.ag}</b><br><span class="text-[9px] text-slate-400">${u.us}</span></td>
-                    <td class="p-4 font-bold ${u.ger==='SIN GERENCIA'?'text-red-500':''}">${u.ger}</td>
-                    <td class="p-4 flex flex-wrap justify-center gap-1">${u.boxes}</td>
-                    <td class="p-4 text-right font-black text-blue-600">${s2t(u.sum)}</td>
-                </tr>`).join('');
+            let totalSegundos = 0;
+            document.getElementById('tabla_body').innerHTML = agentesFiltrados.map(a => {
+                totalSegundos += a.total;
+                let boxes = fechasUnicas.map(f => {
+                    const diaNum = f.split('/')[0];
+                    return `<div class="day-box ${a.dias[f] > 0 ? 'spr-high' : 'day-off'}">${diaNum}</div>`;
+                }).join('');
+                
+                return `<tr>
+                    <td class="p-3 font-bold">${a.nombre}<br><span class="text-[8px] text-slate-400">${a.gerente}</span></td>
+                    <td class="p-3 uppercase font-bold text-slate-500">${a.gerente}</td>
+                    <td class="p-3 flex flex-wrap justify-center">${boxes}</td>
+                    <td class="p-3 text-right font-black text-blue-600">${s2t(a.total)}</td>
+                </tr>`;
+            }).join('');
 
-            // CHARTS
-            Plotly.newPlot('chart_gerencias', [{
-                y: sGerArr.map(e => e[0]).reverse(), x: sGerArr.map(e => e[1].horas/3600).reverse(),
-                type: 'bar', orientation: 'h', marker: { color: '#2563eb' }
-            }], { title: 'HORAS POR GERENCIA', margin: {l:150} });
+            document.getElementById('total_horas_txt').innerText = s2t(totalSegundos);
 
-            Plotly.newPlot('chart_tendencia', [{
-                x: Object.keys(tendencia).map(f => f.split('/')[0]),
-                y: Object.values(tendencia).map(s => s/3600),
-                type: 'scatter', mode: 'lines+markers', fill: 'tozeroy'
-            }], { title: 'TENDENCIA DE CONEXIÓN (HRS)' });
+            // Plots
+            Plotly.newPlot('plot_barras', [{
+                y: sortedGer.map(g => g[0]).reverse(),
+                x: sortedGer.map(g => g[1].total / 3600).reverse(),
+                type: 'bar', orientation: 'h', marker: {color: '#2563eb'}
+            }], { title: 'HORAS POR GERENTE', margin: {l:120, r:20, t:30, b:30} }, {staticPlot: true, responsive: true});
+
+            Plotly.newPlot('plot_tendencia', [{
+                x: Object.keys(tendenciaDiaria).map(f => f.split('/')[0]),
+                y: Object.values(tendenciaDiaria).map(s => s / 3600),
+                type: 'scatter', mode: 'lines+markers', fill: 'tozeroy', line: {shape: 'spline'}
+            }], { title: 'TENDENCIA DE CONEXIÓN (DIARIA)', margin: {l:40, r:20, t:30, b:30} }, {staticPlot: true, responsive: true});
         }
 
-        document.getElementById('sel_mes').addEventListener('change', render);
-        document.getElementById('sel_ger').addEventListener('change', render);
-        window.onload = cargarDesdeGitHub;
+        document.getElementById('sel_mes').onchange = procesarFiltros;
+        document.getElementById('filter_gerencia').onchange = renderDashboard;
+        window.onload = cargarDatos;
     </script>
 </body>
 </html>
