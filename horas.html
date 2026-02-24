@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT AUDIT | Performance Pro</title>
+    <title>GMT AUDIT | Vista Final Optimizada</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,8 +12,7 @@
         .day-box { width: 14px; height: 14px; border-radius: 2px; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        .card-stat { border-top: 4px solid #2563eb; transition: transform 0.2s; }
-        .card-stat:hover { transform: translateY(-2px); }
+        .card-stat { border-top: 4px solid #2563eb; transition: all 0.2s; }
         .scroll-custom::-webkit-scrollbar { width: 4px; }
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -39,11 +38,11 @@
                     <div class="bg-blue-600 px-3 py-1 rounded-lg text-white font-black italic text-xl">GMT</div>
                     <h2 class="text-xs font-black uppercase tracking-tighter italic">Auditoría <span class="text-blue-600">Horas</span></h2>
                 </div>
-                <button onclick="forzarSincronizacion()" class="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-4 py-2 rounded-xl border border-blue-100">🔄 Actualizar Datos</button>
+                <button onclick="forzarSincronizacion()" class="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-4 py-2 rounded-xl">🔄 Sincronizar</button>
             </div>
             <div class="grid grid-cols-2 gap-3">
-                <select id="sel_mes" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs outline-none"></select>
-                <select id="sel_dia" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs outline-none"></select>
+                <select id="sel_mes" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs"></select>
+                <select id="sel_dia" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-xs"></select>
             </div>
         </div>
 
@@ -51,7 +50,7 @@
 
         <div class="grid grid-cols-1 gap-3 mb-3">
             <div class="bg-white p-4 rounded-2xl border shadow-sm">
-                <div id="chart_tendencia" style="height: 300px;"></div>
+                <div id="chart_tendencia" style="height: 350px;"></div>
             </div>
             <div class="bg-white p-4 rounded-2xl border shadow-sm">
                 <div id="chart_gerencias" style="height: 450px;"></div>
@@ -60,16 +59,12 @@
 
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
             <div class="p-4 border-b bg-slate-50/50 flex justify-between items-center">
-                <select id="sel_ger" class="w-full md:w-[350px] p-3 border border-slate-200 rounded-xl font-bold text-xs uppercase outline-none"></select>
+                <select id="sel_ger" class="w-full md:w-[350px] p-3 border border-slate-200 rounded-xl font-bold text-xs uppercase"></select>
             </div>
             <div class="overflow-x-auto max-h-[500px] scroll-custom">
                 <table class="w-full text-[11px] text-left">
                     <thead class="bg-slate-100 text-slate-500 font-bold uppercase sticky top-0 z-10">
-                        <tr>
-                            <th class="p-4">Agente / Gerencia</th>
-                            <th class="p-4 text-center">Calendario</th>
-                            <th class="p-4 text-right">Total Hrs</th>
-                        </tr>
+                        <tr><th class="p-4">Agente</th><th class="p-4 text-center">Calendario</th><th class="p-4 text-right">Hrs</th></tr>
                     </thead>
                     <tbody id="table_body" class="divide-y divide-slate-100 bg-white"></tbody>
                 </table>
@@ -83,12 +78,8 @@
 
         window.onload = async () => {
             const cacheData = localStorage.getItem('gmt_data');
-            if(cacheData) {
-                rawData = JSON.parse(cacheData);
-                procesarFiltros();
-            } else {
-                await cargarDesdeGitHub();
-            }
+            if(cacheData) { rawData = JSON.parse(cacheData); procesarFiltros(); } 
+            else { await cargarDesdeGitHub(); }
         };
 
         async function cargarDesdeGitHub() {
@@ -97,7 +88,6 @@
                 const texto = await resp.text();
                 const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 10);
                 const headers = lineas[0].toUpperCase().split(',');
-                
                 const idx = {
                     agente: headers.findIndex(h => h.includes("AGENTE")),
                     usuario: headers.findIndex(h => h.includes("USUARIO")),
@@ -106,7 +96,6 @@
                     fec: headers.findIndex(h => h.includes("FECHA")),
                     mes: headers.findIndex(h => h.includes("MES"))
                 };
-
                 rawData = lineas.slice(1).map(l => {
                     const c = l.split(',').map(v => v.trim());
                     return {
@@ -115,39 +104,23 @@
                         fecha: c[idx.fec]?.split(' ')[0], mes: (c[idx.mes] || "S/M").toLowerCase()
                     };
                 });
-
                 localStorage.setItem('gmt_data', JSON.stringify(rawData));
                 procesarFiltros();
             } catch (e) { console.error(e); }
         }
 
-        function forzarSincronizacion() {
-            localStorage.clear();
-            location.reload();
-        }
-
-        function t2s(t) {
-            const p = String(t).split(':');
-            return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0;
-        }
-
-        function s2t(s) {
-            const h = Math.floor(s/3600);
-            const m = Math.floor((s%3600)/60);
-            return `${h}:${m.toString().padStart(2,'0')}`;
-        }
+        function forzarSincronizacion() { localStorage.clear(); location.reload(); }
+        function t2s(t) { const p = String(t).split(':'); return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0; }
+        function s2t(s) { const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); return `${h}:${m.toString().padStart(2,'0')}`; }
 
         function procesarFiltros() {
             let setM = new Set(), setG = new Set(), setF = new Set();
             rawData.forEach(r => { setM.add(r.mes); setG.add(r.gerencia); setF.add(r.fecha); });
             fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
-
             document.getElementById('sel_mes').innerHTML = '<option value="ALL">🗓️ TODOS LOS MESES</option>' + [...setM].sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             document.getElementById('sel_ger').innerHTML = '<option value="ALL">👥 TODOS LOS GERENTES</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
-
             document.getElementById('sel_mes').value = localStorage.getItem('last_mes') || 'ALL';
             document.getElementById('sel_ger').value = localStorage.getItem('last_ger') || 'ALL';
-
             actualizarDias();
             document.getElementById('sel_dia').value = localStorage.getItem('last_dia') || 'ALL';
             render();
@@ -160,74 +133,69 @@
         }
 
         function render() {
-            const mSel = document.getElementById('sel_mes').value;
-            const dSel = document.getElementById('sel_dia').value;
-            const gSel = document.getElementById('sel_ger').value;
-            
-            localStorage.setItem('last_mes', mSel);
-            localStorage.setItem('last_dia', dSel);
-            localStorage.setItem('last_ger', gSel);
+            const mSel = document.getElementById('sel_mes').value, dSel = document.getElementById('sel_dia').value, gSel = document.getElementById('sel_ger').value;
+            localStorage.setItem('last_mes', mSel); localStorage.setItem('last_dia', dSel); localStorage.setItem('last_ger', gSel);
 
             let filtrados = rawData.filter(r => (mSel === 'ALL' || r.mes === mSel) && (dSel === 'ALL' || r.fecha === dSel) && (gSel === 'ALL' || r.gerencia === gSel));
             let fActivas = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (mSel === 'ALL' || r.mes === mSel)));
 
             let porEje = {}, statsG = {}, tendencia = {};
             fActivas.forEach(f => tendencia[f] = 0);
-
             filtrados.forEach(r => {
                 if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, ger: r.gerencia, total: 0, dias: new Set() };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
-                
                 if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
-                statsG[r.gerencia].h += r.horas;
-                statsG[r.gerencia].n.add(r.usuario);
-                
+                statsG[r.gerencia].h += r.horas; statsG[r.gerencia].n.add(r.usuario);
                 if(tendencia.hasOwnProperty(r.fecha)) tendencia[r.fecha] += r.horas;
             });
 
             document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
-            // RENDER TARJETAS
             document.getElementById('cards_container').innerHTML = Object.entries(statsG).sort((a,b)=>b[1].h-a[1].h).map(([nom, data]) => `
                 <div class="bg-white p-4 rounded-xl shadow-sm border card-stat text-center">
                     <p class="text-[9px] font-black text-slate-400 uppercase truncate">${nom}</p>
                     <p class="text-xl font-black text-slate-800">${s2t(data.h)}</p>
                     <p class="text-[9px] font-bold text-blue-500 italic">${data.n.size} Ejes.</p>
-                </div>
-            `).join('');
+                </div>`).join('');
 
-            // TABLA
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>a.total-b.total).map(u => {
                 let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
-                return `<tr><td class="p-4"><span class="font-bold">${u.agente}</span><br><span class="text-[8px] text-slate-400 font-bold uppercase">${u.ger}</span></td><td class="p-4 flex flex-wrap justify-center gap-px">${bx}</td><td class="p-4 text-right font-black text-blue-600">${s2t(u.total)}</td></tr>`;
+                return `<tr><td class="p-4 font-bold">${u.agente}<br><span class="text-[8px] text-slate-400 font-bold uppercase">${u.ger}</span></td><td class="p-4 flex flex-wrap justify-center gap-px">${bx}</td><td class="p-4 text-right font-black text-blue-600">${s2t(u.total)}</td></tr>`;
             }).join('');
 
-            // GRÁFICAS
             setTimeout(() => {
+                const config = { responsive: true, displayModeBar: false };
+                
+                // TENDENCIA CON TECHO DINÁMICO
+                const yTen = Object.values(tendencia).map(s => (s/3600).toFixed(1));
+                const maxTen = Math.max(...yTen);
+
                 Plotly.newPlot('chart_tendencia', [{
-                    x: Object.keys(tendencia).map(f => f.split('/')[0]),
-                    y: Object.values(tendencia).map(s => (s/3600).toFixed(1)),
-                    type: 'scatter', mode: 'lines+markers+text',
-                    text: Object.values(tendencia).map(s => (s/3600).toFixed(1)),
-                    textposition: 'top center', line: { color: '#2563eb' }
-                }], { margin: { l:30, r:20, t:50, b:40 }, title: '<b>TENDENCIA HORAS</b>' }, {responsive:true, displayModeBar:false});
+                    x: Object.keys(tendencia).map(f => f.split('/')[0]), y: yTen,
+                    type: 'scatter', mode: 'lines+markers+text', text: yTen,
+                    textposition: 'top center', textfont: { weight: 'bold' },
+                    line: { color: '#2563eb', width: 3 }
+                }], { 
+                    margin: { l:40, r:40, t:50, b:40 }, 
+                    title: '<b>TENDENCIA DIARIA (HRS)</b>',
+                    yaxis: { range: [0, maxTen * 1.15], showgrid: true } // Agrega 15% de espacio arriba
+                }, config);
 
                 const sG = Object.entries(statsG).sort((a,b) => a[1].h - b[1].h);
                 const xBar = sG.map(e => (e[1].h/3600).toFixed(1));
+                const maxBar = Math.max(...xBar);
                 
                 Plotly.newPlot('chart_gerencias', [{
-                    y: sG.map(e => e[0]), x: xBar,
-                    type: 'bar', orientation: 'h', 
-                    text: xBar.map(v => v + ' h'),
-                    textposition: 'outside', marker: { color: '#2563eb' },
-                    cliponaxis: false
+                    y: sG.map(e => e[0]), x: xBar, type: 'bar', orientation: 'h', 
+                    text: xBar.map(v => v + ' h'), textposition: 'outside', 
+                    cliponaxis: false, marker: { color: '#2563eb' }
                 }], { 
                     margin: { l:140, r:100, t:50, b:50 }, 
                     title: '<b>TOTAL POR GERENTE</b>',
-                    xaxis: { showgrid: true, gridcolor: '#f1f5f9' }
-                }, {responsive:true, displayModeBar:false});
+                    xaxis: { range: [0, maxBar * 1.2], showgrid: true } // Agrega 20% de espacio a la derecha
+                }, config);
             }, 400);
         }
 
