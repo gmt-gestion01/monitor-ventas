@@ -97,6 +97,7 @@
     </div>
 
     <script>
+        // URL CORREGIDA A FORMATO RAW
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
         let rawData = [], fechasGlobal = [], agentesConAlerta = [];
 
@@ -110,7 +111,6 @@
                 
                 const headers = lineas[0].toUpperCase().split(',').map(h => h.trim());
                 
-                // Mapeo exacto basado en tu archivo subido
                 const idx = {
                     agente: headers.indexOf("AGENTE"),
                     usuario: headers.indexOf("USUARIO"),
@@ -122,21 +122,26 @@
 
                 rawData = lineas.slice(1).map(l => {
                     const c = l.split(',').map(v => v.trim());
+                    // Limpieza profunda de fecha para evitar errores de 24/02/2026
+                    let fLimpia = c[idx.fec] ? c[idx.fec].split(' ')[0].trim() : "";
+                    
                     return {
                         agente: c[idx.agente] || "N/A", 
                         usuario: c[idx.usuario] || "N/A",
                         horas: t2s(c[idx.horas]), 
                         gerencia: (c[idx.ger] || "SIN GERENCIA").toUpperCase(),
-                        fecha: c[idx.fec] ? c[idx.fec].split(' ')[0] : "",
-                        mes: (c[idx.mes] || "S/M").toLowerCase()
+                        fecha: fLimpia, 
+                        mes: (c[idx.mes] || "S/M").toLowerCase().trim()
                     };
-                }).filter(r => r.agente !== "N/A");
+                }).filter(r => r.agente !== "N/A" && r.fecha !== "");
 
                 procesarFiltros();
-            } catch (e) { console.error("Error al cargar:", e); }
+            } catch (e) { 
+                console.error("Error al cargar:", e);
+                alert("Error al conectar con GitHub. Verifica la URL Raw.");
+            }
         }
 
-        // Función crítica: Convierte "07:56:10" a segundos para poder sumarlos
         function t2s(t) { 
             if(!t || t === "0") return 0;
             const p = String(t).split(':'); 
@@ -152,8 +157,17 @@
 
         function procesarFiltros() {
             let setM = new Set(), setG = new Set(), setF = new Set();
-            rawData.forEach(r => { setM.add(r.mes); setG.add(r.gerencia); setF.add(r.fecha); });
-            fechasGlobal = [...setF].sort((a,b) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join('')));
+            rawData.forEach(r => { 
+                if(r.mes) setM.add(r.mes); 
+                if(r.gerencia) setG.add(r.gerencia); 
+                if(r.fecha) setF.add(r.fecha); 
+            });
+            
+            fechasGlobal = [...setF].sort((a,b) => {
+                const da = a.split('/').reverse().join('');
+                const db = b.split('/').reverse().join('');
+                return da.localeCompare(db);
+            });
             
             document.getElementById('sel_mes').innerHTML = '<option value="ALL">🗓️ TODOS LOS MESES</option>' + [...setM].sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             document.getElementById('sel_ger').innerHTML = '<option value="ALL">👥 TODOS LOS GERENTES</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
@@ -169,7 +183,13 @@
             const m = document.getElementById('sel_mes').value;
             const diasF = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (m === 'ALL' || r.mes === m)));
             document.getElementById('sel_dia').innerHTML = '<option value="ALL">📅 TODOS LOS DÍAS</option>' + diasF.map(f => `<option value="${f}">${f}</option>`).join('');
-            if(localStorage.getItem('gmt_dia')) document.getElementById('sel_dia').value = localStorage.getItem('gmt_dia');
+            
+            const diaGuardado = localStorage.getItem('gmt_dia');
+            if(diasF.includes(diaGuardado)) {
+                document.getElementById('sel_dia').value = diaGuardado;
+            } else {
+                document.getElementById('sel_dia').value = "ALL";
+            }
         }
 
         function render() {
@@ -185,24 +205,20 @@
             let porEje = {}, statsG = {}, trendD = {};
             fActivas.forEach(f => trendD[f] = 0);
 
-            let totalSegundos = 0;
-
             filtrados.forEach(r => {
                 if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, usuario: r.usuario, ger: r.gerencia, total: 0, dias: new Set(), mes: r.mes };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
-                totalSegundos += r.horas;
                 
                 if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
                 statsG[r.gerencia].h += r.horas; statsG[r.gerencia].n.add(r.usuario);
+                
                 if(trendD[r.fecha] !== undefined) trendD[r.fecha] += r.horas;
             });
 
-            // Actualización de KPIs
-            document.getElementById('kpi_sum_hrs').innerText = s2t(totalSegundos);
+            document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
-            // Resto de componentes (Cards, Alertas, Tabla)
             document.getElementById('cards_container').innerHTML = Object.entries(statsG).sort((a,b)=>b[1].h-a[1].h).map(([nom, data]) => `
                 <div class="bg-white p-3 rounded-xl shadow-sm border card-stat text-center">
                     <p class="text-[8px] font-black text-slate-400 uppercase truncate">${nom}</p>
@@ -253,7 +269,7 @@
             }], { 
                 margin: { t: 10, b: 40, l: 150, r: 50 },
                 staticPlot: true,
-                xaxis: { title: 'Horas Totales Acumuladas' },
+                xaxis: { title: 'Horas Totales' },
                 yaxis: { tickfont: {size: 10, weight: 700} }
             }, {responsive: true, displayModeBar: false});
         }
@@ -264,15 +280,15 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "Auditoria_General_GMT.csv";
+            link.download = "Auditoria_GMT.csv";
             link.click();
         }
 
         function descargarAlertasSincronizadas() {
             const mSel = document.getElementById('sel_mes').value;
             if(agentesConAlerta.length === 0) return alert("No hay alertas.");
-            let csv = "EJECUTIVO,USUARIO,GERENCIA,MES_AUDITADO,ESTADO\n";
-            agentesConAlerta.forEach(e => csv += `"${e.agente}","${e.usuario}","${e.ger}","${e.mes.toUpperCase()}","ALERTA: +2 DIAS SIN CONEXION"\n`);
+            let csv = "EJECUTIVO,USUARIO,GERENCIA,MES,ESTADO\n";
+            agentesConAlerta.forEach(e => csv += `"${e.agente}","${e.usuario}","${e.ger}","${e.mes.toUpperCase()}","ALERTA: +2 DIAS OFF"\n`);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
