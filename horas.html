@@ -12,8 +12,8 @@
         .day-box { width: 14px; height: 14px; border-radius: 2px; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
         .spr-high { background-color: #2563eb; color: white; }
         .day-off { background-color: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
-        .card-stat { border-top: 4px solid #2563eb; transition: transform 0.2s; }
-        .card-stat:hover { transform: translateY(-3px); }
+        .card-stat { border-top: 4px solid #2563eb; }
+        .plotly-graph-div { pointer-events: none; } 
         .scroll-custom::-webkit-scrollbar { width: 4px; }
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -21,7 +21,6 @@
 <body class="p-2 md:p-4">
 
     <div class="max-w-[1400px] mx-auto">
-        
         <div class="flex flex-col md:flex-row gap-3 mb-3">
             <div class="bg-white p-4 rounded-2xl shadow-sm border flex-1">
                 <div class="flex items-center gap-2 mb-4">
@@ -44,7 +43,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
                     <select id="sel_mes" class="bg-slate-50 border p-2 rounded-xl font-bold text-xs outline-none"></select>
                     <select id="sel_dia" class="bg-slate-50 border p-2 rounded-xl font-bold text-xs outline-none"></select>
-                    <button onclick="location.reload(true)" class="bg-blue-600 text-white text-[10px] font-bold uppercase rounded-xl py-2 shadow-lg shadow-blue-200">🔄 Sincronizar</button>
+                    <button onclick="location.reload(true)" class="bg-blue-600 text-white text-[10px] font-bold uppercase rounded-xl py-2 shadow-lg">🔄 Sincronizar</button>
                 </div>
                 <div class="flex gap-2">
                     <button onclick="descargarReporteCompleto()" class="flex-1 bg-slate-800 text-white text-[9px] font-bold uppercase py-2 rounded-xl">Descargar CSV General</button>
@@ -110,15 +109,15 @@
                 const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
                 
                 const headers = lineas[0].toUpperCase().split(',').map(h => h.trim());
-                const findCol = (keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
-
+                
+                // Mapeo exacto basado en tu archivo subido
                 const idx = {
-                    agente: findCol(["AGENTE"]),
-                    usuario: findCol(["USUARIO"]),
-                    horas: findCol(["HORAS", "LOGUEO"]),
-                    ger: findCol(["GERENCIA"]),
-                    fec: findCol(["CNX", "FECHA", "DIA"]),
-                    mes: findCol(["MES"])
+                    agente: headers.indexOf("AGENTE"),
+                    usuario: headers.indexOf("USUARIO"),
+                    horas: headers.indexOf("HORAS"),
+                    ger: headers.indexOf("GERENCIA"),
+                    fec: headers.indexOf("FECHA"),
+                    mes: headers.indexOf("MES")
                 };
 
                 rawData = lineas.slice(1).map(l => {
@@ -134,13 +133,15 @@
                 }).filter(r => r.agente !== "N/A");
 
                 procesarFiltros();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error al cargar:", e); }
         }
 
+        // Función crítica: Convierte "07:56:10" a segundos para poder sumarlos
         function t2s(t) { 
-            if(!t) return 0;
+            if(!t || t === "0") return 0;
             const p = String(t).split(':'); 
-            return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0; 
+            if(p.length < 2) return 0;
+            return (+p[0]*3600) + (+p[1]*60) + (+p[2]||0); 
         }
 
         function s2t(s) { 
@@ -157,6 +158,9 @@
             document.getElementById('sel_mes').innerHTML = '<option value="ALL">🗓️ TODOS LOS MESES</option>' + [...setM].sort().map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
             document.getElementById('sel_ger').innerHTML = '<option value="ALL">👥 TODOS LOS GERENTES</option>' + [...setG].sort().map(g => `<option value="${g}">${g}</option>`).join('');
             
+            if(localStorage.getItem('gmt_mes')) document.getElementById('sel_mes').value = localStorage.getItem('gmt_mes');
+            if(localStorage.getItem('gmt_ger')) document.getElementById('sel_ger').value = localStorage.getItem('gmt_ger');
+
             actualizarDias();
             render();
         }
@@ -165,31 +169,40 @@
             const m = document.getElementById('sel_mes').value;
             const diasF = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (m === 'ALL' || r.mes === m)));
             document.getElementById('sel_dia').innerHTML = '<option value="ALL">📅 TODOS LOS DÍAS</option>' + diasF.map(f => `<option value="${f}">${f}</option>`).join('');
+            if(localStorage.getItem('gmt_dia')) document.getElementById('sel_dia').value = localStorage.getItem('gmt_dia');
         }
 
         function render() {
             const mSel = document.getElementById('sel_mes').value, dSel = document.getElementById('sel_dia').value, gSel = document.getElementById('sel_ger').value;
+            
+            localStorage.setItem('gmt_mes', mSel);
+            localStorage.setItem('gmt_dia', dSel);
+            localStorage.setItem('gmt_ger', gSel);
+
             let filtrados = rawData.filter(r => (mSel === 'ALL' || r.mes === mSel) && (dSel === 'ALL' || r.fecha === dSel) && (gSel === 'ALL' || r.gerencia === gSel));
             let fActivas = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (mSel === 'ALL' || r.mes === mSel)));
 
             let porEje = {}, statsG = {}, trendD = {};
             fActivas.forEach(f => trendD[f] = 0);
 
+            let totalSegundos = 0;
+
             filtrados.forEach(r => {
                 if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, usuario: r.usuario, ger: r.gerencia, total: 0, dias: new Set(), mes: r.mes };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
+                totalSegundos += r.horas;
                 
                 if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
                 statsG[r.gerencia].h += r.horas; statsG[r.gerencia].n.add(r.usuario);
-                
                 if(trendD[r.fecha] !== undefined) trendD[r.fecha] += r.horas;
             });
 
-            document.getElementById('kpi_sum_hrs').innerText = s2t(filtrados.reduce((a,b)=>a+b.horas,0));
+            // Actualización de KPIs
+            document.getElementById('kpi_sum_hrs').innerText = s2t(totalSegundos);
             document.getElementById('kpi_count_eje').innerText = Object.keys(porEje).length;
 
-            // CARDS
+            // Resto de componentes (Cards, Alertas, Tabla)
             document.getElementById('cards_container').innerHTML = Object.entries(statsG).sort((a,b)=>b[1].h-a[1].h).map(([nom, data]) => `
                 <div class="bg-white p-3 rounded-xl shadow-sm border card-stat text-center">
                     <p class="text-[8px] font-black text-slate-400 uppercase truncate">${nom}</p>
@@ -197,48 +210,36 @@
                     <p class="text-[8px] font-bold text-blue-500 italic">${data.n.size} Ejes.</p>
                 </div>`).join('');
 
-            // ALERTAS (Lógica de > 2 días de inactividad)
             agentesConAlerta = Object.values(porEje).filter(e => (fActivas.length - e.dias.size) >= 2);
             document.getElementById('count_alertas').innerText = agentesConAlerta.length;
             document.getElementById('alert_table_body').innerHTML = agentesConAlerta.map(e => `
-                <tr class="hover:bg-red-50 text-red-600">
-                    <td class="p-2 pl-4 font-bold uppercase" style="font-size:9px">${e.agente}</td>
-                    <td class="p-2 font-black">${fActivas.length - e.dias.size} DÍAS SIN CONEXIÓN</td>
-                    <td class="p-2 text-right pr-4 font-bold text-slate-400 italic">${e.ger}</td>
-                </tr>`).join('');
+                <tr class="hover:bg-red-50 text-red-600"><td class="p-2 pl-4 font-bold uppercase" style="font-size:9px">${e.agente}</td><td class="p-2 font-black">${fActivas.length - e.dias.size} DÍAS OFF</td><td class="p-2 text-right pr-4 font-bold text-slate-400 italic">${e.ger}</td></tr>`).join('');
 
-            // TABLA
             document.getElementById('table_body').innerHTML = Object.values(porEje).sort((a,b)=>b.total-a.total).map(u => {
                 let bx = ""; fActivas.forEach(f => bx += `<div class="day-box ${u.dias.has(f) ? 'spr-high' : 'day-off'}">${f.split('/')[0]}</div>`);
-                return `<tr>
-                    <td class="p-4 font-bold">${u.agente}<br><span class="text-[8px] text-blue-500 uppercase font-black">${u.usuario}</span></td>
-                    <td class="p-4 text-[9px] font-bold text-slate-400 uppercase">${u.ger}</td>
-                    <td class="p-4 flex flex-wrap justify-center">${bx}</td>
-                    <td class="p-4 text-right font-black text-blue-600">${s2t(u.total)}</td>
-                </tr>`;
+                return `<tr><td class="p-4 font-bold">${u.agente}<br><span class="text-[8px] text-blue-500 uppercase font-black">${u.usuario}</span></td><td class="p-4 text-[9px] font-bold text-slate-400 uppercase">${u.ger}</td><td class="p-4 flex flex-wrap justify-center">${bx}</td><td class="p-4 text-right font-black text-blue-600">${s2t(u.total)}</td></tr>`;
             }).join('');
 
             dibujarGraficas(trendD, statsG);
         }
 
         function dibujarGraficas(trendD, statsG) {
-            // TENDENCIA (Línea) con ETIQUETAS
             Plotly.newPlot('chart_tendencia', [{
                 x: Object.keys(trendD),
                 y: Object.values(trendD).map(v => v / 3600),
                 type: 'scatter', mode: 'lines+markers+text',
                 text: Object.values(trendD).map(v => s2t(v)),
                 textposition: 'top center',
-                textfont: { size: 8, color: '#1e40af' },
+                textfont: { size: 9, color: '#1e40af', weight: 'bold' },
                 line: { shape: 'spline', color: '#2563eb', width: 3 },
                 fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
             }], { 
-                margin: { t: 20, b: 30, l: 40, r: 10 }, 
+                margin: { t: 40, b: 30, l: 50, r: 30 },
+                staticPlot: true,
                 xaxis: { tickfont: {size: 9}, showgrid: false },
                 yaxis: { title: 'Horas', gridcolor: '#f1f5f9' }
-            }, {responsive: true});
+            }, {responsive: true, displayModeBar: false});
 
-            // GERENCIA (Barras Horizontales) con ETIQUETAS
             const sortedGer = Object.entries(statsG).sort((a,b) => a[1].h - b[1].h);
             Plotly.newPlot('chart_gerencias_bar', [{
                 y: sortedGer.map(g => g[0]),
@@ -250,10 +251,11 @@
                 insidetextanchor: 'end',
                 textfont: { color: '#ffffff', size: 10, weight: 900 }
             }], { 
-                margin: { t: 5, b: 30, l: 120, r: 20 },
+                margin: { t: 10, b: 40, l: 150, r: 50 },
+                staticPlot: true,
                 xaxis: { title: 'Horas Totales Acumuladas' },
-                yaxis: { tickfont: {size: 10, family: 'Inter', weight: 700} }
-            }, {responsive: true});
+                yaxis: { tickfont: {size: 10, weight: 700} }
+            }, {responsive: true, displayModeBar: false});
         }
 
         function descargarReporteCompleto() {
@@ -268,17 +270,13 @@
 
         function descargarAlertasSincronizadas() {
             const mSel = document.getElementById('sel_mes').value;
-            if(agentesConAlerta.length === 0) return alert("No hay alertas en este filtro.");
-
+            if(agentesConAlerta.length === 0) return alert("No hay alertas.");
             let csv = "EJECUTIVO,USUARIO,GERENCIA,MES_AUDITADO,ESTADO\n";
-            agentesConAlerta.forEach(e => {
-                csv += `"${e.agente}","${e.usuario}","${e.ger}","${e.mes.toUpperCase()}","ALERTA: +2 DIAS SIN CONEXION"\n`;
-            });
-
+            agentesConAlerta.forEach(e => csv += `"${e.agente}","${e.usuario}","${e.ger}","${e.mes.toUpperCase()}","ALERTA: +2 DIAS SIN CONEXION"\n`);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `Alertas_Sincronizadas_${mSel.toUpperCase()}.csv`;
+            link.download = `Alertas_${mSel.toUpperCase()}.csv`;
             link.click();
         }
 
