@@ -3,71 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT | Dashboard Maestro</title>
+    <title>GMT AUDIT | Sistema de Control</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { background-color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; }
-        .day-box { width: 12px; height: 12px; border-radius: 2px; font-size: 6px; display: flex; align-items: center; justify-content: center; margin: 1px; }
+        body { background-color: #f1f5f9; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .day-box { width: 14px; height: 14px; border-radius: 3px; font-size: 7px; display: flex; align-items: center; justify-content: center; margin: 1px; font-weight: 800; }
         .is-active { background-color: #2563eb; color: white; }
         .is-off { background-color: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
-        .scroll-custom::-webkit-scrollbar { width: 5px; height: 5px; }
+        .scroll-custom::-webkit-scrollbar { width: 6px; height: 6px; }
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="p-4">
+<body class="p-2 md:p-6">
 
-    <div class="max-w-[1500px] mx-auto space-y-4">
+    <div class="max-w-[1600px] mx-auto space-y-4">
         
-        <div class="bg-slate-900 p-6 rounded-3xl shadow-xl text-white flex flex-col md:flex-row gap-6 items-center">
+        <div class="bg-slate-900 p-6 rounded-[2rem] shadow-2xl text-white flex flex-col lg:flex-row gap-6 items-center">
             <div class="flex-1">
-                <h1 class="text-2xl font-black italic tracking-tighter">GMT <span class="text-blue-500">AUDIT PRO</span></h1>
-                <p id="corte-txt" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sincronizando archivo...</p>
+                <h1 class="text-2xl font-black italic tracking-tighter">GMT <span class="text-blue-500">MONITOR</span></h1>
+                <p id="corte-txt" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Sincronizando con servidor...</p>
             </div>
-            <div class="flex flex-wrap gap-3 w-full md:w-auto">
-                <select id="sel-mes" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 w-full md:w-40"></select>
-                <select id="sel-dia" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 w-full md:w-40"></select>
-                <select id="sel-ger" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 w-full md:w-60"></select>
-                <button onclick="descargarAlertas()" class="bg-red-600 hover:bg-red-500 px-4 py-3 rounded-xl text-[10px] font-black uppercase transition-all">📥 Alertas CSV</button>
+            <div class="flex flex-wrap gap-3 w-full lg:w-auto">
+                <select id="sel-mes" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-40"></select>
+                <select id="sel-dia" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-40"></select>
+                <select id="sel-ger" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-60"></select>
+                <button onclick="descargarAlertas()" class="bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg shadow-red-900/20">📥 Descargar Alertas</button>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
             
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-                <div class="p-4 border-b bg-red-50 flex justify-between items-center">
-                    <h2 class="text-red-600 font-black text-xs uppercase tracking-widest">🚨 Alertas de Conexión</h2>
-                    <span id="count-alertas" class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full font-black">0</span>
+            <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div class="p-5 border-b bg-red-50 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-red-600 font-black text-xs uppercase tracking-widest">Alertas de Conexión</h2>
+                        <p class="text-[9px] text-red-400 font-bold">Agentes con faltas en el mes</p>
+                    </div>
+                    <span id="count-alertas" class="bg-red-600 text-white text-xs px-3 py-1 rounded-full font-black">0</span>
                 </div>
-                <div class="overflow-y-auto max-h-[300px] scroll-custom flex-1">
+                <div class="overflow-y-auto max-h-[400px] scroll-custom flex-1">
                     <table class="w-full text-left text-[11px]">
-                        <thead class="bg-slate-50 sticky top-0">
-                            <tr><th class="p-3">Usuario</th><th class="p-3">Gerencia</th><th class="p-3 text-right">Faltas</th></tr>
+                        <thead class="bg-slate-50 sticky top-0 font-black text-slate-400 uppercase text-[9px]">
+                            <tr><th class="p-4">Usuario</th><th class="p-4 text-right">Días Faltantes</th></tr>
                         </thead>
-                        <tbody id="table-alertas" class="divide-y divide-slate-100"></tbody>
+                        <tbody id="table-alertas" class="divide-y divide-slate-100 font-bold"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-                <p class="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">📈 Tendencia de Conexión (Etiqueta: Horas)</p>
-                <div id="chart-tendencia" style="width:100%; height:280px;"></div>
+            <div class="lg:col-span-3 bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tendencia Diaria (Horas Totales)</p>
+                </div>
+                <div id="chart-tendencia" style="width:100%; height:350px;"></div>
             </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="p-4 border-b bg-slate-50">
-                <h2 class="text-slate-500 font-black text-xs uppercase tracking-widest">📋 Detalle General y Calendario</h2>
+        <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b bg-slate-50 flex justify-between items-center">
+                <h2 class="text-slate-500 font-black text-xs uppercase tracking-widest text-center">Detalle de Conexión y Calendario Mensual</h2>
             </div>
             <div class="overflow-x-auto max-h-[600px] scroll-custom">
                 <table class="w-full text-left text-[12px]">
-                    <thead class="bg-white sticky top-0 z-20 border-b">
+                    <thead class="bg-white sticky top-0 z-20 border-b shadow-sm">
                         <tr class="text-slate-400 font-black uppercase text-[10px]">
-                            <th class="p-5">Ejecutivo / Usuario</th>
-                            <th class="p-5">Gerencia</th>
-                            <th class="p-5 text-center">Calendario Mensual</th>
-                            <th class="p-5 text-right">Total Horas</th>
+                            <th class="p-6">Agente</th>
+                            <th class="p-6">Gerencia</th>
+                            <th class="p-6 text-center">Calendario (Asistencia)</th>
+                            <th class="p-6 text-right">Total Hrs</th>
                         </tr>
                     </thead>
                     <tbody id="table-general" class="divide-y divide-slate-100"></tbody>
@@ -78,64 +83,62 @@
 
     <script>
         const CSV_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
-        let rawData = [];
-        let fechasUnicas = [];
-        let agentesAlertas = [];
+        let db = [];
+        let dates = [];
+        let currentAlerts = [];
 
-        async function cargarSistema() {
+        async function init() {
             try {
-                const resp = await fetch(`${CSV_URL}?v=${Date.now()}`);
-                const texto = await resp.text();
-                const filas = texto.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() !== "");
+                // CACHE BUSTING: Añadimos un número aleatorio para forzar la lectura del archivo nuevo
+                const response = await fetch(`${CSV_URL}?nocache=${new Date().getTime()}`);
+                const text = await response.text();
+                const rows = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() !== "");
                 
-                const h = filas[0].toUpperCase().split(',').map(s => s.trim());
-                const pos = {
-                    ag: h.indexOf("AGENTE"), us: h.indexOf("USUARIO"), hr: h.indexOf("HORAS"),
-                    ge: h.indexOf("GERENCIA"), fe: h.indexOf("FECHA"), me: h.indexOf("MES")
+                const headers = rows[0].toUpperCase().split(',').map(s => s.trim());
+                const col = {
+                    ag: headers.indexOf("AGENTE"), us: headers.indexOf("USUARIO"), hr: headers.indexOf("HORAS"),
+                    ge: headers.indexOf("GERENCIA"), fe: headers.indexOf("FECHA"), me: headers.indexOf("MES")
                 };
 
-                rawData = filas.slice(1).map(f => {
-                    const c = f.split(',').map(v => v.trim());
-                    // Parseo flexible de hora: acepta "07:00:00" y "7:00:00"
-                    const t = (c[pos.hr] || "0:0:0").split(':');
-                    const segs = (parseInt(t[0]) * 3600) + (parseInt(t[1]) * 60) + (parseInt(t[2] || 0));
-                    
+                db = rows.slice(1).map(row => {
+                    const c = row.split(',').map(v => v.trim());
+                    const t = (c[col.hr] || "0:0:0").split(':');
+                    const s = (parseInt(t[0]) * 3600) + (parseInt(t[1]) * 60) + (parseInt(t[2] || 0));
                     return {
-                        nombre: c[pos.ag], usuario: c[pos.us], gerencia: c[pos.ge]?.toUpperCase() || "S/G",
-                        segundos: isNaN(segs) ? 0 : segs, fecha: c[pos.fe], mes: c[pos.me]?.toLowerCase()
+                        agente: c[col.ag], usuario: c[col.us], ger: c[col.ge]?.toUpperCase() || "SIN GER",
+                        segs: isNaN(s) ? 0 : s, fecha: c[col.fe], mes: c[col.me]?.toLowerCase()
                     };
                 }).filter(r => r.fecha);
 
-                fechasUnicas = [...new Set(rawData.map(r => r.fecha))].sort((a,b) => {
+                dates = [...new Set(db.map(r => r.fecha))].sort((a,b) => {
                     const pa = a.split('/'), pb = b.split('/');
                     return new Date(pa[2], pa[1]-1, pa[0]) - new Date(pb[2], pb[1]-1, pb[0]);
                 });
 
-                document.getElementById('corte-txt').innerText = `Última actualización: ${fechasUnicas[fechasUnicas.length-1]}`;
-                inicializarFiltros();
+                document.getElementById('corte-txt').innerText = `Última fecha detectada: ${dates[dates.length-1]}`;
+                
+                // Cargar Selectores
+                const meses = [...new Set(db.map(r => r.mes))].sort();
+                document.getElementById('sel-mes').innerHTML = meses.map(m => `<option value="${m}" ${m==='febrero'?'selected':''}>${m.toUpperCase()}</option>`).join('');
+                
+                updateGerencias();
                 render();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error crítico:", e); }
         }
 
-        function inicializarFiltros() {
-            const meses = [...new Set(rawData.map(r => r.mes))].sort();
-            const gers = [...new Set(rawData.map(r => r.gerencia))].sort();
-            
-            document.getElementById('sel-mes').innerHTML = meses.map(m => `<option value="${m}" ${m==='febrero'?'selected':''}>${m.toUpperCase()}</option>`).join('');
-            document.getElementById('sel-ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + gers.map(g => `<option value="${g}">${g}</option>`).join('');
-            actualizarDias();
-        }
-
-        function actualizarDias() {
+        function updateGerencias() {
             const m = document.getElementById('sel-mes').value;
-            const diasMes = fechasUnicas.filter(f => rawData.find(r => r.fecha === f && r.mes === m));
+            const gers = [...new Set(db.filter(r => r.mes === m).map(r => r.ger))].sort();
+            document.getElementById('sel-ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + gers.map(g => `<option value="${g}">${g}</option>`).join('');
+            
+            const diasMes = dates.filter(f => db.find(r => r.fecha === f && r.mes === m));
             document.getElementById('sel-dia').innerHTML = '<option value="ALL">TODOS LOS DÍAS</option>' + diasMes.map(d => `<option value="${d}">${d}</option>`).join('');
         }
 
         function fmt(s) {
             const h = Math.floor(s / 3600);
-            const m = Math.floor((s % 3600) / 60);
-            return `${h}:${m.toString().padStart(2, '0')}`;
+            const min = Math.floor((s % 3600) / 60);
+            return `${h}:${min.toString().padStart(2, '0')}`;
         }
 
         function render() {
@@ -143,82 +146,83 @@
             const fD = document.getElementById('sel-dia').value;
             const fG = document.getElementById('sel-ger').value;
 
-            const filtrado = rawData.filter(r => (r.mes === fM) && (fD === 'ALL' || r.fecha === fD) && (fG === 'ALL' || r.gerencia === fG));
-            const rangoDias = fechasUnicas.filter(f => rawData.find(r => r.fecha === f && r.mes === fM));
+            const filtrado = db.filter(r => r.mes === fM && (fD === 'ALL' || r.fecha === fD) && (fG === 'ALL' || r.ger === fG));
+            const rangoDias = dates.filter(f => db.find(r => r.fecha === f && r.mes === fM));
 
             let ags = {}, trend = {};
             rangoDias.forEach(d => trend[d] = 0);
 
             filtrado.forEach(r => {
-                if(!ags[r.usuario]) ags[r.usuario] = { n: r.nombre, u: r.usuario, g: r.gerencia, t: 0, d: new Set() };
-                ags[r.usuario].t += r.segundos;
+                if(!ags[r.usuario]) ags[r.usuario] = { n: r.agente, u: r.usuario, g: r.ger, t: 0, d: new Set() };
+                ags[r.usuario].t += r.segs;
                 ags[r.usuario].d.add(r.fecha);
-                if(trend[r.fecha] !== undefined) trend[r.fecha] += r.segundos;
+                if(trend[r.fecha] !== undefined) trend[r.fecha] += r.segs;
             });
 
             // ALERTAS
-            agentesAlertas = Object.values(ags).filter(a => a.d.size < rangoDias.length);
-            document.getElementById('count-alertas').innerText = agentesAlertas.length;
-            document.getElementById('table-alertas').innerHTML = agentesAlertas.map(a => `
-                <tr class="hover:bg-red-50">
-                    <td class="p-3 font-bold">${a.u}</td>
-                    <td class="p-3 text-slate-400 uppercase">${a.g}</td>
-                    <td class="p-3 text-right font-black text-red-600">${rangoDias.length - a.d.size} d</td>
+            currentAlerts = Object.values(ags).filter(a => a.d.size < rangoDias.length);
+            document.getElementById('count-alertas').innerText = currentAlerts.length;
+            document.getElementById('table-alertas').innerHTML = currentAlerts.sort((a,b) => a.d.size - b.d.size).map(a => `
+                <tr class="hover:bg-red-50 border-l-4 border-transparent hover:border-red-500 transition-all">
+                    <td class="p-4">${a.u}<br><span class="text-[8px] text-slate-400 uppercase">${a.g}</span></td>
+                    <td class="p-4 text-right text-red-600 font-black">${rangoDias.length - a.d.size} faltas</td>
                 </tr>`).join('');
 
             // TABLA GENERAL
-            document.getElementById('table-general').innerHTML = Object.values(ags).sort((a,b)=>b.t-a.t).map(a => {
+            document.getElementById('table-general').innerHTML = Object.values(ags).sort((a,b) => b.t - a.t).map(a => {
                 let boxes = "";
-                rangoDias.slice(-20).forEach(f => {
+                rangoDias.slice(-25).forEach(f => {
                     boxes += `<div class="day-box ${a.d.has(f) ? 'is-active' : 'is-off'}">${f.split('/')[0]}</div>`;
                 });
                 return `<tr>
-                    <td class="p-5"><b>${a.n}</b><br><span class="text-blue-500 font-bold text-[10px] uppercase">${a.u}</span></td>
-                    <td class="p-5 font-bold text-slate-400 uppercase">${a.g}</td>
-                    <td class="p-5 flex justify-center items-center h-full">${boxes}</td>
-                    <td class="p-5 text-right font-black text-slate-800">${fmt(a.t)}</td>
+                    <td class="p-6"><b>${a.n}</b><br><span class="text-blue-500 font-bold text-[10px] uppercase tracking-tighter">${a.u}</span></td>
+                    <td class="p-6 font-bold text-slate-400 uppercase">${a.g}</td>
+                    <td class="p-6 flex justify-center items-center h-full">${boxes}</td>
+                    <td class="p-6 text-right font-black text-slate-800 text-sm">${fmt(a.t)}</td>
                 </tr>`;
             }).join('');
 
-            graficar(trend);
+            draw(trend);
         }
 
-        function graficar(data) {
+        function draw(data) {
+            const vals = Object.values(data).map(s => (s/3600).toFixed(1));
             const trace = {
-                x: Object.keys(data), y: Object.values(data).map(s => (s/3600).toFixed(1)),
+                x: Object.keys(data), y: vals,
                 type: 'scatter', mode: 'lines+markers+text',
-                text: Object.values(data).map(s => (s/3600).toFixed(1) + 'h'),
-                textposition: 'top center',
+                text: vals.map(v => v + 'h'), textposition: 'top center',
+                textfont: { size: 9, color: '#1e293b', font: { weight: '800' } },
                 line: { shape: 'spline', color: '#2563eb', width: 4 },
-                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
+                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)',
+                marker: { size: 8, color: '#2563eb' }
             };
             Plotly.newPlot('chart-tendencia', [trace], {
-                margin: { t: 20, b: 40, l: 40, r: 20 },
-                xaxis: { showgrid: false, tickfont: {size: 9} },
-                yaxis: { gridcolor: '#f1f5f9', tickfont: {size: 9} }
+                margin: { t: 30, b: 40, l: 40, r: 20 },
+                xaxis: { showgrid: false, tickfont: {size: 10, color: '#94a3b8'} },
+                yaxis: { gridcolor: '#f1f5f9', tickfont: {size: 10, color: '#94a3b8'} }
             }, {responsive: true, displayModeBar: false});
         }
 
         function descargarAlertas() {
-            let csv = "USUARIO,AGENTE,GERENCIA,DIAS_FALTANTES\n";
+            let csv = "USUARIO,AGENTE,GERENCIA,DIAS_TRABAJADOS,DIAS_FALTANTES\n";
             const m = document.getElementById('sel-mes').value;
-            const r = fechasUnicas.filter(f => rawData.find(x => x.fecha === f && x.mes === m));
-            agentesAlertas.forEach(a => {
-                csv += `${a.u},${a.n},${a.g},${r.length - a.d.size}\n`;
+            const totalDias = dates.filter(f => db.find(x => x.fecha === f && x.mes === m)).length;
+            currentAlerts.forEach(a => {
+                csv += `${a.u},${a.n},${a.g},${a.d.size},${totalDias - a.d.size}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', `Alertas_${m}.csv`);
+            a.href = url;
+            a.download = `Alertas_${m}.csv`;
             a.click();
         }
 
-        document.getElementById('sel-mes').onchange = () => { actualizarDias(); render(); };
-        document.getElementById('sel-dia').onchange = render;
+        document.getElementById('sel-mes').onchange = () => { updateGerencias(); render(); };
         document.getElementById('sel-ger').onchange = render;
+        document.getElementById('sel-dia').onchange = render;
 
-        cargarSistema();
+        init();
     </script>
 </body>
 </html>
