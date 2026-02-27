@@ -43,11 +43,10 @@
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
                     <select id="sel_mes" class="bg-slate-50 border p-2 rounded-xl font-bold text-xs outline-none"></select>
                     <select id="sel_dia" class="bg-slate-50 border p-2 rounded-xl font-bold text-xs outline-none"></select>
-                    <button onclick="location.reload(true)" class="bg-blue-600 text-white text-[10px] font-bold uppercase rounded-xl py-2 shadow-lg">🔄 Sincronizar</button>
+                    <button onclick="forzarRefresco()" class="bg-red-600 text-white text-[10px] font-bold uppercase rounded-xl py-2 shadow-lg animate-pulse">⚡ Forzar Actualización</button>
                 </div>
                 <div class="flex gap-2">
                     <button onclick="descargarReporteCompleto()" class="flex-1 bg-slate-800 text-white text-[9px] font-bold uppercase py-2 rounded-xl">Descargar CSV General</button>
-                    <button id="btn_alertas" onclick="descargarAlertasSincronizadas()" class="flex-1 bg-red-600 text-white text-[9px] font-bold uppercase py-2 rounded-xl">🚨 Descargar Alertas Mes</button>
                 </div>
             </div>
         </div>
@@ -80,15 +79,21 @@
     </div>
 
     <script>
-        // URL RAW CORRECTA PARA LECTURA DE DATOS
+        // URL RAW con parámetro aleatorio para saltar la caché
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
-        let rawData = [], fechasGlobal = [], agentesConAlerta = [];
+        let rawData = [], fechasGlobal = [];
 
         window.onload = async () => { await cargarDesdeGitHub(); };
 
+        async function forzarRefresco() {
+            localStorage.clear();
+            location.reload(true);
+        }
+
         async function cargarDesdeGitHub() {
             try {
-                const resp = await fetch(GITHUB_URL + "?t=" + new Date().getTime());
+                // El "?nocache=" + Date.now() es vital para ver lo nuevo de hoy
+                const resp = await fetch(GITHUB_URL + "?nocache=" + Date.now());
                 const texto = await resp.text();
                 const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
                 const headers = lineas[0].toUpperCase().split(',').map(h => h.trim());
@@ -104,25 +109,26 @@
 
                 rawData = lineas.slice(1).map(l => {
                     const c = l.split(',').map(v => v.trim());
+                    let fRaw = c[idx.fec] || "";
+                    let fLimpia = fRaw.split(' ')[0].replace(/-/g, '/');
+
                     return {
                         agente: c[idx.agente] || "N/A", 
                         usuario: c[idx.usuario] || "N/A",
                         horas: t2s(c[idx.horas]), 
                         gerencia: (c[idx.ger] || "SIN GERENCIA").toUpperCase(),
-                        fecha: c[idx.fec] || "",
+                        fecha: fLimpia,
                         mes: (c[idx.mes] || "S/M").toLowerCase().trim()
                     };
                 }).filter(r => r.agente !== "N/A" && r.fecha !== "");
 
                 procesarFiltros();
-            } catch (e) { console.error("Error:", e); }
+            } catch (e) { alert("Error al conectar: " + e.message); }
         }
 
-        // FUNCIÓN MEJORADA PARA LEER HORAS SIN CERO INICIAL (Ej: 7:02:03)
         function t2s(t) { 
             if(!t || t === "0" || t === "") return 0;
             const p = String(t).split(':'); 
-            if(p.length < 2) return 0;
             const h = parseInt(p[0], 10) || 0;
             const m = parseInt(p[1], 10) || 0;
             const s = parseInt(p[2], 10) || 0;
@@ -159,8 +165,8 @@
             const m = document.getElementById('sel_mes').value;
             const diasF = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (m === 'ALL' || r.mes === m)));
             document.getElementById('sel_dia').innerHTML = '<option value="ALL">📅 TODOS LOS DÍAS</option>' + diasF.map(f => `<option value="${f}">${f}</option>`).join('');
-            const dGuardado = localStorage.getItem('gmt_dia');
-            if(diasF.includes(dGuardado)) document.getElementById('sel_dia').value = dGuardado;
+            const dG = localStorage.getItem('gmt_dia');
+            if(diasF.includes(dG)) document.getElementById('sel_dia').value = dG;
         }
 
         function render() {
@@ -174,7 +180,7 @@
             fActivas.forEach(f => trendD[f] = 0);
 
             filtrados.forEach(r => {
-                if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, usuario: r.usuario, ger: r.gerencia, total: 0, dias: new Set(), mes: r.mes };
+                if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, usuario: r.usuario, ger: r.gerencia, total: 0, dias: new Set() };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
                 if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
@@ -203,21 +209,23 @@
         function dibujarGraficas(trendD) {
             Plotly.newPlot('chart_tendencia', [{
                 x: Object.keys(trendD), y: Object.values(trendD).map(v => v / 3600),
-                type: 'scatter', mode: 'lines+markers+text', text: Object.values(trendD).map(v => s2t(v)),
-                textposition: 'top center', textfont: { size: 9, color: '#1e40af', weight: 'bold' },
-                line: { shape: 'spline', color: '#2563eb', width: 3 }, fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
-            }], { margin: { t: 40, b: 30, l: 50, r: 30 }, staticPlot: true, xaxis: { tickfont: {size: 9}, showgrid: false }, yaxis: { title: 'Horas', gridcolor: '#f1f5f9' } }, {responsive: true, displayModeBar: false});
+                type: 'scatter', mode: 'lines+markers', line: { shape: 'spline', color: '#2563eb', width: 3 }, fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
+            }], { margin: { t: 40, b: 30, l: 50, r: 30 }, staticPlot: true, xaxis: { tickfont: {size: 9} }, yaxis: { title: 'Horas' } }, {responsive: true, displayModeBar: false});
         }
 
         function descargarReporteCompleto() {
-            let csv = "EJECUTIVO,USUARIO,GERENCIA,FECHA,HORAS,MES\n";
-            rawData.forEach(r => csv += `"${r.agente}","${r.usuario}","${r.gerencia}","${r.fecha}","${s2t(r.horas)}","${r.mes.toUpperCase()}"\n`);
+            let csv = "EJECUTIVO,USUARIO,GERENCIA,FECHA,HORAS\n";
+            rawData.forEach(r => csv += `"${r.agente}","${r.usuario}","${r.gerencia}","${r.fecha}","${s2t(r.horas)}"\n`);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = "Auditoria_GMT.csv";
             link.click();
         }
+
+        document.getElementById('sel_mes').addEventListener('change', () => { actualizarDias(); render(); });
+        document.getElementById('sel_dia').addEventListener('change', render);
+        document.getElementById('sel_ger').addEventListener('change', render);
     </script>
 </body>
 </html>
