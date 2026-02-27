@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT MONITOR | Layout Ajustado</title>
+    <title>GMT MONITOR | Layout Final</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -14,8 +14,6 @@
         .is-off { background-color: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
         .scroll-custom::-webkit-scrollbar { width: 6px; height: 6px; }
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .kpi-card { transition: transform 0.2s; }
-        .kpi-card:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body class="p-2 md:p-6">
@@ -25,7 +23,7 @@
         <div class="bg-slate-900 p-6 rounded-[2rem] shadow-2xl text-white flex flex-col lg:flex-row gap-6 items-center">
             <div class="flex-1">
                 <h1 class="text-2xl font-black italic tracking-tighter">GMT <span class="text-blue-500">MONITOR</span></h1>
-                <p id="corte-txt" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest italic">Sincronizando...</p>
+                <p id="corte-txt" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest italic">Sincronizando con GitHub...</p>
             </div>
             <div class="flex flex-wrap gap-3 w-full lg:w-auto">
                 <select id="sel-mes" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-48 cursor-pointer"></select>
@@ -37,7 +35,7 @@
 
         <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6">
             <div class="flex justify-between items-center mb-4">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tendencia Diaria de Conexión</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Tendencia Diaria de Conexión</p>
                 <div id="kpi-total" class="text-blue-600 font-black text-2xl tracking-tighter">0h</div>
             </div>
             <div id="chart-tendencia" style="width:100%; height:320px;"></div>
@@ -46,10 +44,10 @@
         <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-5 border-b bg-red-50 flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <h2 class="text-red-600 font-black text-xs uppercase tracking-widest">🚨 Panel de Alertas por Inasistencia</h2>
+                    <h2 class="text-red-600 font-black text-xs uppercase tracking-widest">🚨 Agentes con Inasistencias</h2>
                     <span id="count-alertas" class="bg-red-600 text-white text-xs px-3 py-1 rounded-full font-black shadow-md">0</span>
                 </div>
-                <p class="text-[9px] text-red-400 font-bold uppercase italic">Agentes con días faltantes en el periodo</p>
+                <p class="text-[9px] text-red-400 font-bold uppercase italic">Comparativo de días trabajados vs total del periodo</p>
             </div>
             <div class="overflow-x-auto max-h-[300px] scroll-custom">
                 <table class="w-full text-left text-[12px]">
@@ -57,7 +55,7 @@
                         <tr>
                             <th class="p-4">Usuario</th>
                             <th class="p-4">Gerencia</th>
-                            <th class="p-4 text-center">Días Trabajados</th>
+                            <th class="p-4 text-center">Días Activos</th>
                             <th class="p-4 text-right text-red-600">Total Faltas</th>
                         </tr>
                     </thead>
@@ -68,7 +66,7 @@
 
         <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-6 border-b bg-slate-50">
-                <h2 class="text-slate-500 font-black text-xs uppercase tracking-widest">Detalle General y Calendario de Asistencia</h2>
+                <h2 class="text-slate-500 font-black text-xs uppercase tracking-widest">Calendario Mensual de Asistencia</h2>
             </div>
             <div class="overflow-x-auto max-h-[600px] scroll-custom">
                 <table class="w-full text-left text-[12px]">
@@ -76,8 +74,8 @@
                         <tr class="text-slate-400 font-black uppercase text-[10px]">
                             <th class="p-6">Usuario / Agente</th>
                             <th class="p-6">Gerencia</th>
-                            <th class="p-6 text-center">Actividad (Últimos 20 días)</th>
-                            <th class="p-6 text-right">Tiempo Total</th>
+                            <th class="p-6 text-center">Actividad (Últimos 15 días)</th>
+                            <th class="p-6 text-right">Tiempo Acumulado</th>
                         </tr>
                     </thead>
                     <tbody id="table-general" class="divide-y divide-slate-100"></tbody>
@@ -95,7 +93,7 @@
                 const response = await fetch(`${RAW_URL}?t=${new Date().getTime()}`);
                 const data = await response.text();
                 parseData(data);
-            } catch (e) { document.getElementById('corte-txt').innerText = "Error de conexión con GitHub"; }
+            } catch (e) { document.getElementById('corte-txt').innerText = "Error de conexión"; }
         }
 
         function parseData(csv) {
@@ -115,7 +113,7 @@
                 return new Date(pa[2], pa[1]-1, pa[0]) - new Date(pb[2], pb[1]-1, pb[0]);
             });
 
-            document.getElementById('corte-txt').innerText = `Última Fecha: ${dates[dates.length-1]}`;
+            document.getElementById('corte-txt').innerText = `Corte Actual: ${dates[dates.length-1]}`;
             
             const meses = [...new Set(db.map(r => r.m))].sort();
             document.getElementById('sel-mes').innerHTML = '<option value="ALL">🗓️ ACUMULADO TOTAL</option>' + 
@@ -162,21 +160,21 @@
 
             document.getElementById('kpi-total').innerText = Math.floor(filtrado.reduce((a,b)=>a+b.s,0)/3600).toLocaleString() + "h";
 
-            // TABLA DE ALERTAS (AJUSTADA DEBAJO)
+            // TABLA ALERTAS (EN MEDIO)
             alertasArr = fD === 'ALL' ? Object.values(ags).filter(a => a.d.size < rango.length) : [];
             document.getElementById('count-alertas').innerText = alertasArr.length;
             document.getElementById('table-alertas').innerHTML = alertasArr.sort((a,b)=>a.d.size - b.d.size).map(a => `
-                <tr class="hover:bg-red-50 transition-colors">
+                <tr>
                     <td class="p-4 text-slate-800">${a.u}</td>
                     <td class="p-4 text-slate-400 uppercase text-[10px]">${a.g}</td>
-                    <td class="p-4 text-center text-slate-600">${a.d.size} días</td>
+                    <td class="p-4 text-center text-slate-600">${a.d.size} d</td>
                     <td class="p-4 text-right text-red-600 font-black">${rango.length - a.d.size} faltas</td>
                 </tr>`).join('');
 
-            // TABLA GENERAL
+            // TABLA GENERAL (ABAJO)
             document.getElementById('table-general').innerHTML = Object.values(ags).sort((a,b)=>b.t-a.t).map(a => {
                 let bxs = "";
-                rango.slice(-20).forEach(f => {
+                rango.slice(-15).forEach(f => {
                     bxs += `<div class="day-box ${a.d.has(f) ? 'is-active' : 'is-off'}">${f.split('/')[0]}</div>`;
                 });
                 return `<tr>
@@ -187,33 +185,31 @@
                 </tr>`;
             }).join('');
 
-            // GRÁFICA AJUSTADA
+            // GRÁFICA
             const labels = Object.keys(trend).map(f => f.split('/').slice(0,2).join('/'));
             Plotly.newPlot('chart-tendencia', [{
                 x: labels, y: Object.values(trend).map(s => (s/3600).toFixed(1)),
                 type: 'scatter', mode: 'lines+markers+text',
-                text: Object.values(trend).map(s => (s/3600).toFixed(0)), // Sin decimales en etiqueta para ahorrar espacio
+                text: Object.values(trend).map(s => (s/3600).toFixed(0)),
                 textposition: 'top center',
-                textfont: { size: 10, font: { weight: '800' }, color: '#1e293b' },
+                textfont: { size: 10, font: { weight: '800' } },
                 line: { shape: 'spline', color: '#2563eb', width: 4 },
-                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)',
-                marker: { size: 8, color: '#2563eb', line: { color: 'white', width: 2 } }
+                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
             }], { 
                 margin: { t: 30, b: 40, l: 40, r: 20 },
-                xaxis: { showgrid: false, tickfont: {size: 10, color: '#94a3b8'}, tickangle: 0 },
-                yaxis: { gridcolor: '#f1f5f9', tickfont: {size: 10, color: '#94a3b8'}, zeroline: false }
+                xaxis: { showgrid: false, tickfont: {size: 10, color: '#94a3b8'} },
+                yaxis: { gridcolor: '#f1f5f9', tickfont: {size: 10, color: '#94a3b8'} }
             }, {responsive: true, displayModeBar: false});
         }
 
         function descargarAlertas() {
             let csv = "USUARIO,GERENCIA,DIAS_TRABAJADOS,FALTAS\n";
             const m = document.getElementById('sel-mes').value;
-            const rangoAct = [...new Set(db.filter(r => (m === 'ALL' || r.m === m)).map(r => r.f))].length;
-            alertasArr.forEach(a => { csv += `${a.u},${a.g},${a.d.size},${rangoAct - a.d.size}\n`; });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `Alertas_GMT.csv`; a.click();
+            const t = [...new Set(db.filter(r => (m === 'ALL' || r.m === m)).map(r => r.f))].length;
+            alertasArr.forEach(a => { csv += `${a.u},${a.g},${a.d.size},${t - a.d.size}\n`; });
+            const b = new Blob([csv], { type: 'text/csv' });
+            const u = window.URL.createObjectURL(b);
+            const a = document.createElement('a'); a.href = u; a.download = `Alertas_GMT.csv`; a.click();
         }
 
         document.getElementById('sel-mes').onchange = () => { updateFilters(); render(); };
