@@ -97,7 +97,6 @@
     </div>
 
     <script>
-        // URL CORREGIDA A FORMATO RAW
         const GITHUB_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
         let rawData = [], fechasGlobal = [], agentesConAlerta = [];
 
@@ -109,8 +108,9 @@
                 const texto = await resp.text();
                 const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
                 
-                const headers = lineas[0].toUpperCase().split(',').map(h => h.trim());
+                const headers = lineas[0].split(',').map(h => h.trim().toUpperCase());
                 
+                // Mapeo exacto por nombre de columna
                 const idx = {
                     agente: headers.indexOf("AGENTE"),
                     usuario: headers.indexOf("USUARIO"),
@@ -122,31 +122,24 @@
 
                 rawData = lineas.slice(1).map(l => {
                     const c = l.split(',').map(v => v.trim());
-                    // Limpieza profunda de fecha para evitar errores de 24/02/2026
-                    let fLimpia = c[idx.fec] ? c[idx.fec].split(' ')[0].trim() : "";
-                    
                     return {
                         agente: c[idx.agente] || "N/A", 
                         usuario: c[idx.usuario] || "N/A",
                         horas: t2s(c[idx.horas]), 
                         gerencia: (c[idx.ger] || "SIN GERENCIA").toUpperCase(),
-                        fecha: fLimpia, 
-                        mes: (c[idx.mes] || "S/M").toLowerCase().trim()
+                        fecha: c[idx.fec] || "", 
+                        mes: (c[idx.mes] || "S/M").toLowerCase()
                     };
                 }).filter(r => r.agente !== "N/A" && r.fecha !== "");
 
                 procesarFiltros();
-            } catch (e) { 
-                console.error("Error al cargar:", e);
-                alert("Error al conectar con GitHub. Verifica la URL Raw.");
-            }
+            } catch (e) { console.error("Error:", e); }
         }
 
         function t2s(t) { 
             if(!t || t === "0") return 0;
             const p = String(t).split(':'); 
-            if(p.length < 2) return 0;
-            return (+p[0]*3600) + (+p[1]*60) + (+p[2]||0); 
+            return p.length >= 2 ? (+p[0]*3600) + (+p[1]*60) + (+p[2]||0) : 0; 
         }
 
         function s2t(s) { 
@@ -157,11 +150,7 @@
 
         function procesarFiltros() {
             let setM = new Set(), setG = new Set(), setF = new Set();
-            rawData.forEach(r => { 
-                if(r.mes) setM.add(r.mes); 
-                if(r.gerencia) setG.add(r.gerencia); 
-                if(r.fecha) setF.add(r.fecha); 
-            });
+            rawData.forEach(r => { setM.add(r.mes); setG.add(r.gerencia); setF.add(r.fecha); });
             
             fechasGlobal = [...setF].sort((a,b) => {
                 const da = a.split('/').reverse().join('');
@@ -185,11 +174,7 @@
             document.getElementById('sel_dia').innerHTML = '<option value="ALL">📅 TODOS LOS DÍAS</option>' + diasF.map(f => `<option value="${f}">${f}</option>`).join('');
             
             const diaGuardado = localStorage.getItem('gmt_dia');
-            if(diasF.includes(diaGuardado)) {
-                document.getElementById('sel_dia').value = diaGuardado;
-            } else {
-                document.getElementById('sel_dia').value = "ALL";
-            }
+            if(diasF.includes(diaGuardado)) document.getElementById('sel_dia').value = diaGuardado;
         }
 
         function render() {
@@ -209,10 +194,8 @@
                 if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, usuario: r.usuario, ger: r.gerencia, total: 0, dias: new Set(), mes: r.mes };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
-                
                 if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
                 statsG[r.gerencia].h += r.horas; statsG[r.gerencia].n.add(r.usuario);
-                
                 if(trendD[r.fecha] !== undefined) trendD[r.fecha] += r.horas;
             });
 
