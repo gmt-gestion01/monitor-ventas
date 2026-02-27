@@ -160,7 +160,6 @@
 
             document.getElementById('kpi-total').innerText = Math.floor(filtrado.reduce((a,b)=>a+b.s,0)/3600).toLocaleString() + "h";
 
-            // TABLA ALERTAS (EN MEDIO)
             alertasArr = fD === 'ALL' ? Object.values(ags).filter(a => a.d.size < rango.length) : [];
             document.getElementById('count-alertas').innerText = alertasArr.length;
             document.getElementById('table-alertas').innerHTML = alertasArr.sort((a,b)=>a.d.size - b.d.size).map(a => `
@@ -171,7 +170,6 @@
                     <td class="p-4 text-right text-red-600 font-black">${rango.length - a.d.size} faltas</td>
                 </tr>`).join('');
 
-            // TABLA GENERAL (ABAJO)
             document.getElementById('table-general').innerHTML = Object.values(ags).sort((a,b)=>b.t-a.t).map(a => {
                 let bxs = "";
                 rango.slice(-15).forEach(f => {
@@ -185,7 +183,6 @@
                 </tr>`;
             }).join('');
 
-            // GRÁFICA
             const labels = Object.keys(trend).map(f => f.split('/').slice(0,2).join('/'));
             Plotly.newPlot('chart-tendencia', [{
                 x: labels, y: Object.values(trend).map(s => (s/3600).toFixed(1)),
@@ -202,14 +199,23 @@
             }, {responsive: true, displayModeBar: false});
         }
 
+        // FUNCIÓN ACTUALIZADA CON TIEMPO DE CONEXIÓN
         function descargarAlertas() {
-            let csv = "USUARIO,GERENCIA,DIAS_TRABAJADOS,FALTAS\n";
+            let csv = "USUARIO,GERENCIA,DIAS_TRABAJADOS,FALTAS,TIEMPO_CONEXION_TOTAL\n";
             const m = document.getElementById('sel-mes').value;
             const t = [...new Set(db.filter(r => (m === 'ALL' || r.m === m)).map(r => r.f))].length;
-            alertasArr.forEach(a => { csv += `${a.u},${a.g},${a.d.size},${t - a.d.size}\n`; });
+            
+            alertasArr.forEach(a => { 
+                // Agregamos el tiempo formateado al final de cada fila
+                csv += `${a.u},${a.g},${a.d.size},${t - a.d.size},${fmt(a.t)}\n`; 
+            });
+            
             const b = new Blob([csv], { type: 'text/csv' });
             const u = window.URL.createObjectURL(b);
-            const a = document.createElement('a'); a.href = u; a.download = `Alertas_GMT.csv`; a.click();
+            const a = document.createElement('a'); 
+            a.href = u; 
+            a.download = `Alertas_GMT_Con_Tiempo.csv`; 
+            a.click();
         }
 
         document.getElementById('sel-mes').onchange = () => { updateFilters(); render(); };
