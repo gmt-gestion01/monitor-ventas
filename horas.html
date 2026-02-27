@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT MONITOR | Final Fix</title>
+    <title>GMT MONITOR | Full Data Sync</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,6 +12,8 @@
         .day-box { width: 14px; height: 14px; border-radius: 2px; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 1px; }
         .is-active { background-color: #2563eb; color: white; }
         .is-off { background-color: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
+        .scroll-custom::-webkit-scrollbar { width: 4px; }
+        .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="p-2 md:p-4">
@@ -20,114 +22,121 @@
         <div class="flex flex-col md:flex-row gap-4 mb-4">
             <div class="bg-white p-6 rounded-3xl shadow-sm border-t-4 border-blue-600 flex-1">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xs font-black uppercase tracking-widest">Panel de <span class="text-blue-600">Asistencia</span></h2>
-                    <span id="last-update" class="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full italic">Sincronizando...</span>
+                    <h2 class="text-xs font-black uppercase tracking-widest text-slate-500">Monitor <span class="text-blue-600">Performance</span></h2>
+                    <span id="last-update" class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full uppercase italic font-black">Sincronizando...</span>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><p class="text-[10px] font-bold text-slate-400">EJECUTIVOS</p><p id="kpi-ejes" class="text-3xl font-black">0</p></div>
-                    <div><p class="text-[10px] font-bold text-slate-400">HORAS TOTALES</p><p id="kpi-hrs" class="text-3xl font-black text-blue-600">0:00</p></div>
+                    <div><p class="text-[10px] font-bold text-slate-400">AGENTES ACTIVOS</p><p id="kpi-ejes" class="text-4xl font-black text-slate-800">0</p></div>
+                    <div><p class="text-[10px] font-bold text-slate-400">HORAS TOTALES</p><p id="kpi-hrs" class="text-4xl font-black text-blue-600">0:00</p></div>
                 </div>
             </div>
-            <div class="bg-red-600 p-6 rounded-3xl shadow-lg flex-1 text-white">
-                <p class="text-[10px] font-bold uppercase mb-2">🚨 Alertas Críticas</p>
-                <p class="text-[9px] mb-3 opacity-80">Agentes con más de 2 días de inactividad</p>
-                <div id="alert-summary" class="text-2xl font-black">Cargando alertas...</div>
+            
+            <div class="bg-red-600 p-6 rounded-3xl shadow-lg flex-1 text-white relative overflow-hidden">
+                <div class="relative z-10">
+                    <p class="text-[10px] font-black uppercase mb-1 tracking-widest opacity-80">🚨 Alertas de Conexión</p>
+                    <p id="alert-summary" class="text-4xl font-black">0 AGENTES</p>
+                    <p class="text-[10px] font-bold mt-2 italic">Faltas detectadas en el periodo seleccionado</p>
+                </div>
+                <div class="absolute right-[-20px] bottom-[-20px] text-white opacity-10 text-9xl font-black italic">!</div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <select id="sel-mes" class="p-3 rounded-xl border-none shadow-sm font-bold text-xs bg-white"></select>
-            <select id="sel-dia" class="p-3 rounded-xl border-none shadow-sm font-bold text-xs bg-white"></select>
-            <select id="sel-ger" class="p-3 rounded-xl border-none shadow-sm font-bold text-xs bg-white"></select>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <select id="sel-mes" class="p-3 rounded-2xl border-none shadow-sm font-bold text-xs bg-white outline-none ring-1 ring-slate-200"></select>
+            <select id="sel-dia" class="p-3 rounded-2xl border-none shadow-sm font-bold text-xs bg-white outline-none ring-1 ring-slate-200"></select>
+            <select id="sel-ger" class="p-3 rounded-2xl border-none shadow-sm font-bold text-xs bg-white outline-none ring-1 ring-slate-200"></select>
         </div>
 
         <div class="bg-white p-4 rounded-3xl border shadow-sm mb-4">
-            <div id="main-chart" style="width:100%; height:200px;"></div>
+            <div id="main-chart" style="width:100%; height:220px;"></div>
         </div>
 
         <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
-            <div class="overflow-x-auto max-h-[500px]">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-50 text-slate-400 font-black uppercase sticky top-0">
-                        <tr><th class="p-4">Agente</th><th class="p-4">Gerencia</th><th class="p-4 text-center">Últimos Días</th><th class="p-4 text-right">Total</th></tr>
+            <div class="overflow-x-auto max-h-[600px] scroll-custom">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-[10px] text-slate-500 font-black uppercase sticky top-0 z-20">
+                        <tr>
+                            <th class="p-5">Agente / Usuario</th>
+                            <th class="p-5">Gerencia</th>
+                            <th class="p-5 text-center">Calendario (Últimos días)</th>
+                            <th class="p-5 text-right">Total Hrs.</th>
+                        </tr>
                     </thead>
-                    <tbody id="main-table" class="divide-y"></tbody>
+                    <tbody id="main-table" class="divide-y divide-slate-100 text-[12px]"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        const URL_BASE = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
+        const GITHUB_RAW = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
         let db = [];
         let allDates = [];
 
-        async function init() {
+        async function load() {
             try {
-                const res = await fetch(`${URL_BASE}?nocache=${new Date().getTime()}`);
-                const rawText = await res.text();
-                const rows = rawText.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim() !== "");
+                // Forzar descarga fresca sin caché
+                const r = await fetch(`${GITHUB_RAW}?nocache=${Date.now()}`);
+                const txt = await r.text();
+                const lines = txt.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() !== "");
                 
-                // Buscador inteligente de columnas
-                const head = rows[0].toUpperCase().split(',').map(h => h.trim());
-                const findCol = (name) => head.findIndex(h => h.includes(name));
-
-                const col = {
-                    ag: findCol("AGENTE"),
-                    us: findCol("USUARIO"),
-                    hr: findCol("HORAS"),
-                    ge: findCol("GERENCIA"),
-                    fe: findCol("FECHA"),
-                    me: findCol("MES")
+                const h = lines[0].toUpperCase().split(',').map(s => s.trim());
+                const idx = {
+                    ag: h.indexOf("AGENTE"),
+                    us: h.indexOf("USUARIO"),
+                    hr: h.indexOf("HORAS"),
+                    ge: h.indexOf("GERENCIA"),
+                    fe: h.indexOf("FECHA"),
+                    me: h.indexOf("MES")
                 };
 
-                db = rows.slice(1).map(row => {
-                    const c = row.split(',').map(v => v.trim());
-                    return {
-                        agente: c[col.ag] || "S/N",
-                        usuario: c[col.us] || "S/U",
-                        segundos: timeToSec(c[col.hr]),
-                        gerencia: (c[col.ge] || "GENERAL").toUpperCase(),
-                        fecha: c[col.fe] ? c[col.fe].split(' ')[0].replace(/-/g, '/') : "",
-                        mes: (c[col.me] || "").toLowerCase()
-                    };
-                }).filter(i => i.fecha);
+                db = lines.slice(1).map(line => {
+                    const c = line.split(',').map(v => v.trim());
+                    // PARSEO FLEXIBLE DE HORA: Soporta 08:00:00 y 7:00:00
+                    let hStr = c[idx.hr] || "0:0:0";
+                    let parts = hStr.split(':');
+                    let totalSec = (parseInt(parts[0]) * 3600) + (parseInt(parts[1]) * 60) + (parseInt(parts[2] || 0));
 
+                    return {
+                        agente: c[idx.ag] || "S/N",
+                        usuario: c[idx.us] || "S/U",
+                        segundos: totalSec,
+                        gerencia: (c[idx.ge] || "GENERAL").toUpperCase(),
+                        fecha: c[idx.fe] || "",
+                        mes: (c[idx.me] || "").toLowerCase()
+                    };
+                }).filter(i => i.fecha !== "");
+
+                // Ordenar fechas cronológicamente
                 allDates = [...new Set(db.map(d => d.fecha))].sort((a,b) => {
                     const [da, ma, aa] = a.split('/');
                     return new Date(aa, ma-1, da) - new Date(b.split('/')[2], b.split('/')[1]-1, b.split('/')[0]);
                 });
 
-                document.getElementById('last-update').innerText = `Actualizado: ${allDates[allDates.length-1]}`;
+                document.getElementById('last-update').innerText = `Corte: ${allDates[allDates.length-1]}`;
                 fillFilters();
                 render();
-            } catch (err) { console.error(err); }
+            } catch (e) { console.error(e); }
         }
 
-        function timeToSec(str) {
-            if (!str || str === "0") return 0;
-            const p = str.split(':');
-            return (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + (parseInt(p[2] || 0));
-        }
-
-        function secToTime(s) {
+        function fmtTime(s) {
             const h = Math.floor(s / 3600);
             const m = Math.floor((s % 3600) / 60);
             return `${h}:${m.toString().padStart(2, '0')}`;
         }
 
         function fillFilters() {
-            const meses = [...new Set(db.map(i => i.mes))].sort();
-            const gers = [...new Set(db.map(i => i.gerencia))].sort();
-            document.getElementById('sel-mes').innerHTML = '<option value="ALL">TODOS LOS MESES</option>' + meses.map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
-            document.getElementById('sel-ger').innerHTML = '<option value="ALL">TODAS LAS GERENCIAS</option>' + gers.map(g => `<option value="${g}">${g}</option>`).join('');
-            updateDayFilter();
+            const m = [...new Set(db.map(i => i.mes))].sort();
+            const g = [...new Set(db.map(i => i.gerencia))].sort();
+            document.getElementById('sel-mes').innerHTML = '<option value="ALL">🗓️ TODOS LOS MESES</option>' + m.map(x => `<option value="${x}">${x.toUpperCase()}</option>`).join('');
+            document.getElementById('sel-ger').innerHTML = '<option value="ALL">👥 TODAS LAS GERENCIAS</option>' + g.map(x => `<option value="${x}">${x}</option>`).join('');
+            updateDays();
         }
 
-        function updateDayFilter() {
-            const m = document.getElementById('sel-mes').value;
-            const days = allDates.filter(f => db.find(r => r.fecha === f && (m === 'ALL' || r.mes === m)));
-            document.getElementById('sel-dia').innerHTML = '<option value="ALL">TODOS LOS DÍAS</option>' + days.map(f => `<option value="${f}">${f}</option>`).join('');
+        function updateDays() {
+            const selM = document.getElementById('sel-mes').value;
+            const days = allDates.filter(f => db.find(r => r.fecha === f && (selM === 'ALL' || r.mes === selM)));
+            document.getElementById('sel-dia').innerHTML = '<option value="ALL">📅 TODOS LOS DÍAS</option>' + days.map(f => `<option value="${f}">${f}</option>`).join('');
         }
 
         function render() {
@@ -148,17 +157,23 @@
                 if(trend[r.fecha] !== undefined) trend[r.fecha] += r.segundos;
             });
 
-            const alertas = Object.values(ag).filter(a => (range.length - a.d.size) >= 2).length;
+            // Alertas: Agentes que tienen menos días de los que existen en el rango
+            const alertas = Object.values(ag).filter(a => a.d.size < range.length).length;
             document.getElementById('alert-summary').innerText = `${alertas} AGENTES`;
-            document.getElementById('kpi-hrs').innerText = secToTime(filtered.reduce((a,b) => a + b.segundos, 0));
+            document.getElementById('kpi-hrs').innerText = fmtTime(filtered.reduce((a,b) => a + b.segundos, 0));
             document.getElementById('kpi-ejes').innerText = Object.keys(ag).length;
 
             document.getElementById('main-table').innerHTML = Object.values(ag).sort((a,b) => b.t - a.t).map(s => {
                 let bxs = "";
-                range.slice(-10).forEach(f => {
+                range.slice(-14).forEach(f => {
                     bxs += `<div class="day-box ${s.d.has(f) ? 'is-active' : 'is-off'}">${f.split('/')[0]}</div>`;
                 });
-                return `<tr><td class="p-4 font-bold">${s.n}</td><td class="p-4 text-slate-400 font-bold">${s.g}</td><td class="p-4 flex justify-center">${bxs}</td><td class="p-4 text-right font-black text-blue-600">${secToTime(s.t)}</td></tr>`;
+                return `<tr>
+                    <td class="p-5"><span class="font-bold text-slate-800">${s.n}</span><br><span class="text-[9px] text-blue-500 font-black uppercase">${s.u}</span></td>
+                    <td class="p-5 text-[10px] font-bold text-slate-400 uppercase">${s.g}</td>
+                    <td class="p-5 flex justify-center">${bxs}</td>
+                    <td class="p-5 text-right font-black text-blue-600">${fmtTime(s.t)}</td>
+                </tr>`;
             }).join('');
 
             draw(trend);
@@ -167,15 +182,15 @@
         function draw(data) {
             Plotly.newPlot('main-chart', [{
                 x: Object.keys(data), y: Object.values(data).map(s => (s/3600).toFixed(1)),
-                type: 'scatter', mode: 'lines+markers', line: {shape: 'spline', color: '#2563eb'}, fill: 'tozeroy'
-            }], { margin: { t: 10, b: 30, l: 30, r: 10 }, xaxis: {showgrid: false}, yaxis: {gridcolor: '#eee'} }, {responsive: true, displayModeBar: false});
+                type: 'scatter', mode: 'lines+markers', line: {shape: 'spline', color: '#2563eb', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
+            }], { margin: { t: 10, b: 30, l: 30, r: 10 }, xaxis: {showgrid: false, tickfont: {size: 9}}, yaxis: {gridcolor: '#f1f5f9', tickfont: {size: 9}} }, {responsive: true, displayModeBar: false});
         }
 
-        document.getElementById('sel-mes').onchange = () => { updateDayFilter(); render(); };
+        document.getElementById('sel-mes').onchange = () => { updateDays(); render(); };
         document.getElementById('sel-dia').onchange = render;
         document.getElementById('sel-ger').onchange = render;
 
-        init();
+        load();
     </script>
 </body>
 </html>
