@@ -120,33 +120,33 @@
 
                 rawData = lineas.slice(1).map(l => {
                     const c = l.split(',').map(v => v.trim());
-                    // Limpieza de fecha para asegurar formato DD/MM/YYYY
-                    let f = c[idx.fec] || "";
-                    if (f.includes('-')) f = f.replace(/-/g, '/'); 
+                    // Normalización de fecha para aceptar 26/02/2026 y 26-02-2026
+                    let fRaw = c[idx.fec] || "";
+                    let fLimpia = fRaw.split(' ')[0].replace(/-/g, '/');
 
                     return {
                         agente: c[idx.agente] || "N/A", 
                         usuario: c[idx.usuario] || "N/A",
                         horas: t2s(c[idx.horas]), 
                         gerencia: (c[idx.ger] || "SIN GERENCIA").toUpperCase(),
-                        fecha: f,
+                        fecha: fLimpia,
                         mes: (c[idx.mes] || "S/M").toLowerCase().trim()
                     };
                 }).filter(r => r.agente !== "N/A" && r.fecha !== "");
 
                 procesarFiltros();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error cargando datos:", e); }
         }
 
-        // Función mejorada para aceptar "7:02:03" y "07:02:03"
+        // Función tolerante a formatos de hora como 7:02:03 o 07:02:03
         function t2s(t) { 
-            if(!t || t === "0") return 0;
+            if(!t || t === "0" || t === "") return 0;
             const p = String(t).split(':'); 
             if(p.length < 2) return 0;
-            const hrs = parseInt(p[0], 10);
-            const min = parseInt(p[1], 10);
-            const sec = p[2] ? parseInt(p[2], 10) : 0;
-            return (hrs * 3600) + (min * 60) + sec;
+            const h = parseInt(p[0], 10) || 0;
+            const m = parseInt(p[1], 10) || 0;
+            const s = parseInt(p[2], 10) || 0;
+            return (h * 3600) + (m * 60) + s;
         }
 
         function s2t(s) { 
@@ -157,7 +157,11 @@
 
         function procesarFiltros() {
             let setM = new Set(), setG = new Set(), setF = new Set();
-            rawData.forEach(r => { setM.add(r.mes); setG.add(r.gerencia); setF.add(r.fecha); });
+            rawData.forEach(r => { 
+                if(r.mes) setM.add(r.mes); 
+                if(r.gerencia) setG.add(r.gerencia); 
+                if(r.fecha) setF.add(r.fecha); 
+            });
             
             fechasGlobal = [...setF].sort((a,b) => {
                 const da = a.split('/').reverse().join('');
@@ -179,13 +183,17 @@
             const m = document.getElementById('sel_mes').value;
             const diasF = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (m === 'ALL' || r.mes === m)));
             document.getElementById('sel_dia').innerHTML = '<option value="ALL">📅 TODOS LOS DÍAS</option>' + diasF.map(f => `<option value="${f}">${f}</option>`).join('');
-            const dGuardado = localStorage.getItem('gmt_dia');
-            if(diasF.includes(dGuardado)) document.getElementById('sel_dia').value = dGuardado;
+            
+            const diaGuardado = localStorage.getItem('gmt_dia');
+            if(diasF.includes(diaGuardado)) document.getElementById('sel_dia').value = diaGuardado;
         }
 
         function render() {
             const mSel = document.getElementById('sel_mes').value, dSel = document.getElementById('sel_dia').value, gSel = document.getElementById('sel_ger').value;
-            localStorage.setItem('gmt_mes', mSel); localStorage.setItem('gmt_dia', dSel); localStorage.setItem('gmt_ger', gSel);
+            
+            localStorage.setItem('gmt_mes', mSel);
+            localStorage.setItem('gmt_dia', dSel);
+            localStorage.setItem('gmt_ger', gSel);
 
             let filtrados = rawData.filter(r => (mSel === 'ALL' || r.mes === mSel) && (dSel === 'ALL' || r.fecha === dSel) && (gSel === 'ALL' || r.gerencia === gSel));
             let fActivas = fechasGlobal.filter(f => rawData.find(r => r.fecha === f && (mSel === 'ALL' || r.mes === mSel)));
@@ -197,8 +205,10 @@
                 if(!porEje[r.usuario]) porEje[r.usuario] = { agente: r.agente, usuario: r.usuario, ger: r.gerencia, total: 0, dias: new Set(), mes: r.mes };
                 porEje[r.usuario].total += r.horas;
                 porEje[r.usuario].dias.add(r.fecha);
+                
                 if(!statsG[r.gerencia]) statsG[r.gerencia] = { h: 0, n: new Set() };
                 statsG[r.gerencia].h += r.horas; statsG[r.gerencia].n.add(r.usuario);
+                
                 if(trendD[r.fecha] !== undefined) trendD[r.fecha] += r.horas;
             });
 
@@ -227,18 +237,37 @@
 
         function dibujarGraficas(trendD, statsG) {
             Plotly.newPlot('chart_tendencia', [{
-                x: Object.keys(trendD), y: Object.values(trendD).map(v => v / 3600),
-                type: 'scatter', mode: 'lines+markers+text', text: Object.values(trendD).map(v => s2t(v)),
-                textposition: 'top center', textfont: { size: 9, color: '#1e40af', weight: 'bold' },
-                line: { shape: 'spline', color: '#2563eb', width: 3 }, fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
-            }], { margin: { t: 40, b: 30, l: 50, r: 30 }, staticPlot: true, xaxis: { tickfont: {size: 9}, showgrid: false }, yaxis: { title: 'Horas', gridcolor: '#f1f5f9' } }, {responsive: true, displayModeBar: false});
+                x: Object.keys(trendD),
+                y: Object.values(trendD).map(v => v / 3600),
+                type: 'scatter', mode: 'lines+markers+text',
+                text: Object.values(trendD).map(v => s2t(v)),
+                textposition: 'top center',
+                textfont: { size: 9, color: '#1e40af', weight: 'bold' },
+                line: { shape: 'spline', color: '#2563eb', width: 3 },
+                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
+            }], { 
+                margin: { t: 40, b: 30, l: 50, r: 30 },
+                staticPlot: true,
+                xaxis: { tickfont: {size: 9}, showgrid: false },
+                yaxis: { title: 'Horas', gridcolor: '#f1f5f9' }
+            }, {responsive: true, displayModeBar: false});
 
             const sortedGer = Object.entries(statsG).sort((a,b) => a[1].h - b[1].h);
             Plotly.newPlot('chart_gerencias_bar', [{
-                y: sortedGer.map(g => g[0]), x: sortedGer.map(g => g[1].h / 3600),
-                type: 'bar', orientation: 'h', marker: { color: '#3b82f6' }, text: sortedGer.map(g => s2t(g[1].h)), 
-                textposition: 'inside', insidetextanchor: 'end', textfont: { color: '#ffffff', size: 10, weight: 900 }
-            }], { margin: { t: 10, b: 40, l: 150, r: 50 }, staticPlot: true, xaxis: { title: 'Horas Totales' }, yaxis: { tickfont: {size: 10, weight: 700} } }, {responsive: true, displayModeBar: false});
+                y: sortedGer.map(g => g[0]),
+                x: sortedGer.map(g => g[1].h / 3600),
+                type: 'bar', orientation: 'h',
+                marker: { color: '#3b82f6' },
+                text: sortedGer.map(g => s2t(g[1].h)), 
+                textposition: 'inside',
+                insidetextanchor: 'end',
+                textfont: { color: '#ffffff', size: 10, weight: 900 }
+            }], { 
+                margin: { t: 10, b: 40, l: 150, r: 50 },
+                staticPlot: true,
+                xaxis: { title: 'Horas Totales' },
+                yaxis: { tickfont: {size: 10, weight: 700} }
+            }, {responsive: true, displayModeBar: false});
         }
 
         function descargarReporteCompleto() {
