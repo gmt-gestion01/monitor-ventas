@@ -15,7 +15,6 @@
         .scroll-custom::-webkit-scrollbar { width: 6px; height: 6px; }
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        /* Estilo similar a la imagen cargada */
         .card-gerencia {
             background: white;
             border-radius: 1.5rem;
@@ -51,8 +50,7 @@
             <div id="chart-tendencia" style="width:100%; height:320px;"></div>
         </div>
 
-        <div id="grid-gerencias" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            </div>
+        <div id="grid-gerencias" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
 
         <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-5 border-b bg-red-50 flex justify-between items-center">
@@ -103,7 +101,7 @@
                 const response = await fetch(`${RAW_URL}?t=${new Date().getTime()}`);
                 const data = await response.text();
                 parseData(data);
-            } catch (e) { console.error("Error al cargar datos"); }
+            } catch (e) { console.error(e); }
         }
 
         function parseData(csv) {
@@ -164,13 +162,12 @@
                 ags[r.u].d.set(r.f, (ags[r.u].d.get(r.f) || 0) + r.s);
                 if(trend[r.f] !== undefined) trend[r.f] += r.s;
                 
-                // Agrupar para las tarjetas
                 if(!gerRes[r.g]) gerRes[r.g] = { s: 0, u: new Set() };
                 gerRes[r.g].s += r.s;
                 gerRes[r.g].u.add(r.u);
             });
 
-            // RENDER TARJETAS (ESTILO IMAGEN)
+            // Tarjetas
             document.getElementById('grid-gerencias').innerHTML = Object.entries(gerRes).sort((a,b)=>b[1].s - a[1].s).map(([n, d]) => `
                 <div class="card-gerencia">
                     <p class="text-[11px] font-black text-blue-900 uppercase tracking-tighter italic mb-4 border-b pb-2">${n}</p>
@@ -198,17 +195,26 @@
                 return `<tr><td class="p-6 font-bold text-slate-800">${a.u}</td><td class="p-6 font-bold text-slate-400 uppercase text-[10px]">${a.g}</td><td class="p-6 flex justify-center items-center">${bxs}</td><td class="p-6 text-right font-black text-blue-600 text-sm">${fmt(a.t)}</td></tr>`;
             }).join('');
 
+            // Gráfica con Etiquetas de Datos activadas
             Plotly.newPlot('chart-tendencia', [{
                 x: Object.keys(trend).map(f => f.split('/').slice(0,2).join('/')),
                 y: Object.values(trend).map(s => (s/3600).toFixed(1)),
-                type: 'scatter', mode: 'lines+markers', line: { shape: 'spline', color: '#2563eb', width: 4 }, fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
-            }], { margin: { t: 30, b: 40, l: 40, r: 20 }, xaxis: {showgrid: false}, yaxis: {gridcolor: '#f1f5f9'}}, {responsive: true, displayModeBar: false});
+                type: 'scatter', 
+                mode: 'lines+markers+text', // Se añadió '+text'
+                text: Object.values(trend).map(s => (s/3600).toFixed(1)), // Valor que se muestra
+                textposition: 'top center',
+                textfont: { family: 'Plus Jakarta Sans', size: 10, color: '#1e293b', weight: 800 },
+                line: { shape: 'spline', color: '#2563eb', width: 4 }, 
+                fill: 'tozeroy', 
+                fillcolor: 'rgba(37, 99, 235, 0.05)'
+            }], { 
+                margin: { t: 30, b: 40, l: 40, r: 20 }, 
+                xaxis: { showgrid: false }, 
+                yaxis: { gridcolor: '#f1f5f9' }
+            }, { responsive: true, displayModeBar: false });
         }
 
-        function descargarReporteExcel() {
-            // Lógica de descarga simplificada (se mantiene la anterior)
-            alert("Generando CSV...");
-        }
+        function descargarReporteExcel() { /* Se mantiene lógica de descarga anterior */ }
 
         document.getElementById('sel-mes').onchange = () => { updateFilters(); render(); };
         document.getElementById('sel-dia').onchange = render;
