@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT MONITOR | Layout Completo</title>
+    <title>GMT MONITOR | Layout Final Funcional</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -23,7 +23,7 @@
         <div class="bg-slate-900 p-6 rounded-[2rem] shadow-2xl text-white flex flex-col lg:flex-row gap-6 items-center">
             <div class="flex-1">
                 <h1 class="text-2xl font-black italic tracking-tighter">GMT <span class="text-blue-500">MONITOR</span></h1>
-                <p id="corte-txt" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest italic">Sincronizando con GitHub...</p>
+                <p id="corte-txt" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest italic">Sincronizando...</p>
             </div>
             <div class="flex flex-wrap gap-3 w-full lg:w-auto">
                 <select id="sel-mes" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-48 cursor-pointer"></select>
@@ -45,10 +45,8 @@
 
         <div class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
             <div class="p-5 border-b bg-red-50 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-red-600 font-black text-xs uppercase tracking-widest">🚨 Agentes con Inasistencias</h2>
-                    <span id="count-alertas" class="bg-red-600 text-white text-xs px-3 py-1 rounded-full font-black shadow-md">0</span>
-                </div>
+                <h2 class="text-red-600 font-black text-xs uppercase tracking-widest">🚨 Agentes con Inasistencias</h2>
+                <span id="count-alertas" class="bg-red-600 text-white text-xs px-3 py-1 rounded-full font-black">0</span>
             </div>
             <div class="overflow-x-auto max-h-[300px] scroll-custom">
                 <table class="w-full text-left text-[12px]">
@@ -87,14 +85,14 @@
 
     <script>
         const RAW_URL = "https://raw.githubusercontent.com/gmt-gestion01/monitor-ventas/main/HORAS_ACUMULADO_HC_1.csv";
-        let db = [], dates = [];
+        let db = [];
 
         async function fetchCSV() {
             try {
                 const response = await fetch(`${RAW_URL}?t=${new Date().getTime()}`);
                 const data = await response.text();
                 parseData(data);
-            } catch (e) { document.getElementById('corte-txt').innerText = "Error de conexión"; }
+            } catch (e) { console.error(e); }
         }
 
         function parseData(csv) {
@@ -106,7 +104,9 @@
                 const c = r.split(',').map(v => v.trim());
                 const t = (c[col.hr] || "0:0:0").split(':');
                 const s = (parseInt(t[0]||0) * 3600) + (parseInt(t[1]||0) * 60) + (parseInt(t[2] || 0));
-                return { u: c[col.us], g: c[col.ge]?.toUpperCase() || "S/G", s: isNaN(s) ? 0 : s, f: c[col.fe], m: c[col.me]?.toLowerCase() };
+                let g = c[col.ge]?.toUpperCase() || "SIN GERENCIA";
+                if(g === "" || g === "UNDEFINED") g = "SIN GERENCIA";
+                return { u: c[col.us], g: g, s: isNaN(s) ? 0 : s, f: c[col.fe], m: c[col.me]?.toLowerCase() };
             }).filter(i => i.f);
 
             const meses = [...new Set(db.map(r => r.m))].sort();
@@ -130,6 +130,7 @@
         }
 
         function fmt(s) { return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`; }
+        
         function fmtHHMMSS(s) {
             const h = Math.floor(s / 3600);
             const m = Math.floor((s % 3600) / 60);
@@ -150,36 +151,32 @@
 
             document.getElementById('corte-txt').innerText = `Corte Actual: ${rango[rango.length-1] || '---'}`;
 
-            let ags = {}, trend = {}, gerData = {};
+            let ags = {}, trend = {}, gerRes = {};
             rango.forEach(d => trend[d] = 0);
 
             filtrado.forEach(r => {
-                // General Agentes
                 if(!ags[r.u]) ags[r.u] = { u: r.u, g: r.g, t: 0, d: new Map() };
                 ags[r.u].t += r.s;
                 ags[r.u].d.set(r.f, (ags[r.u].d.get(r.f) || 0) + r.s);
-                // Tendencia
                 if(trend[r.f] !== undefined) trend[r.f] += r.s;
-                // Gerencias
-                if(!gerData[r.g]) gerData[r.g] = { t: 0, u: new Set() };
-                gerData[r.g].t += r.s;
-                gerData[r.g].u.add(r.u);
+                
+                if(!gerRes[r.g]) gerRes[r.g] = { s: 0, u: new Set() };
+                gerRes[r.g].s += r.s;
+                gerRes[r.g].u.add(r.u);
             });
 
-            // Render Tarjetas Gerencia
-            document.getElementById('grid-gerencias').innerHTML = Object.entries(gerData).map(([name, data]) => `
+            // Render Tarjetas Dinámicas
+            document.getElementById('grid-gerencias').innerHTML = Object.entries(gerRes).sort((a,b)=>b[1].s - a[1].s).map(([n, d]) => `
                 <div class="bg-white p-5 rounded-[2rem] border border-slate-200 shadow-sm">
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">${name}</p>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">${n}</p>
                     <div class="flex justify-between items-end">
-                        <span class="text-xl font-black text-slate-800">${fmt(data.t)}</span>
-                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">${data.u.size} Agentes</span>
+                        <span class="text-xl font-black text-slate-800">${fmt(d.s)}</span>
+                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">${d.u.size} Agentes</span>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('');
 
             document.getElementById('kpi-total').innerText = Math.floor(filtrado.reduce((a,b)=>a+b.s,0)/3600).toLocaleString() + "h";
 
-            // Alertas y Tablas...
             const alertasArr = fD === 'ALL' ? Object.values(ags).filter(a => a.d.size < rango.length) : [];
             document.getElementById('count-alertas').innerText = alertasArr.length;
             document.getElementById('table-alertas').innerHTML = alertasArr.sort((a,b)=>a.d.size - b.d.size).map(a => `
@@ -223,7 +220,7 @@
             const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `GMT_Detallado_${m}.csv`;
+            link.download = `GMT_Reporte_${m}.csv`;
             link.click();
         }
 
