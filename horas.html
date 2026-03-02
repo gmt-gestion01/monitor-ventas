@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMT MONITOR | Layout Final</title>
+    <title>GMT MONITOR | Dashboard Completo</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -16,12 +16,8 @@
         .scroll-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
         .card-gerencia {
-            background: white;
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            border: 1px solid #e2e8f0;
+            background: white; border-radius: 1.5rem; padding: 1.5rem; border: 1px solid #e2e8f0;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
         }
     </style>
 </head>
@@ -38,7 +34,7 @@
                 <select id="sel-mes" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-48 cursor-pointer"></select>
                 <select id="sel-dia" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-40 cursor-pointer"></select>
                 <select id="sel-ger" class="bg-slate-800 border-none p-3 rounded-xl font-bold text-xs outline-none ring-1 ring-slate-700 flex-1 lg:w-60 cursor-pointer"></select>
-                <button onclick="descargarReporteExcel()" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg">📥 Exportar Reporte</button>
+                <button onclick="descargarReporteExcel()" class="bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg">📥 Exportar Reporte</button>
             </div>
         </div>
 
@@ -139,6 +135,12 @@
         }
 
         function fmt(s) { return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`; }
+        function fmtHHMMSS(s) {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sec = s % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+        }
 
         function render() {
             const fM = document.getElementById('sel-mes').value;
@@ -161,7 +163,6 @@
                 ags[r.u].t += r.s;
                 ags[r.u].d.set(r.f, (ags[r.u].d.get(r.f) || 0) + r.s);
                 if(trend[r.f] !== undefined) trend[r.f] += r.s;
-                
                 if(!gerRes[r.g]) gerRes[r.g] = { s: 0, u: new Set() };
                 gerRes[r.g].s += r.s;
                 gerRes[r.g].u.add(r.u);
@@ -183,38 +184,62 @@
 
             document.getElementById('kpi-total').innerText = Math.floor(filtrado.reduce((a,b)=>a+b.s,0)/3600).toLocaleString() + "h";
 
-            // Alertas y Tablas
+            // Alertas
             const alertasArr = fD === 'ALL' ? Object.values(ags).filter(a => a.d.size < rango.length) : [];
             document.getElementById('count-alertas').innerText = alertasArr.length;
             document.getElementById('table-alertas').innerHTML = alertasArr.sort((a,b)=>a.d.size - b.d.size).map(a => `
                 <tr><td class="p-4 text-slate-800">${a.u}</td><td class="p-4 text-slate-400 uppercase text-[10px]">${a.g}</td><td class="p-4 text-center text-slate-600">${a.d.size} d</td><td class="p-4 text-right text-red-600 font-black">${rango.length - a.d.size} faltas</td></tr>`).join('');
 
+            // Tabla General
             document.getElementById('table-general').innerHTML = Object.values(ags).sort((a,b)=>b.t-a.t).map(a => {
                 let bxs = "";
                 rango.slice(-15).forEach(f => { bxs += `<div class="day-box ${a.d.has(f) ? 'is-active' : 'is-off'}">${f.split('/')[0]}</div>`; });
                 return `<tr><td class="p-6 font-bold text-slate-800">${a.u}</td><td class="p-6 font-bold text-slate-400 uppercase text-[10px]">${a.g}</td><td class="p-6 flex justify-center items-center">${bxs}</td><td class="p-6 text-right font-black text-blue-600 text-sm">${fmt(a.t)}</td></tr>`;
             }).join('');
 
-            // Gráfica con Etiquetas de Datos activadas
+            // Gráfica
             Plotly.newPlot('chart-tendencia', [{
                 x: Object.keys(trend).map(f => f.split('/').slice(0,2).join('/')),
                 y: Object.values(trend).map(s => (s/3600).toFixed(1)),
-                type: 'scatter', 
-                mode: 'lines+markers+text', // Se añadió '+text'
-                text: Object.values(trend).map(s => (s/3600).toFixed(1)), // Valor que se muestra
+                type: 'scatter', mode: 'lines+markers+text',
+                text: Object.values(trend).map(s => (s/3600).toFixed(1)),
                 textposition: 'top center',
-                textfont: { family: 'Plus Jakarta Sans', size: 10, color: '#1e293b', weight: 800 },
-                line: { shape: 'spline', color: '#2563eb', width: 4 }, 
-                fill: 'tozeroy', 
-                fillcolor: 'rgba(37, 99, 235, 0.05)'
-            }], { 
-                margin: { t: 30, b: 40, l: 40, r: 20 }, 
-                xaxis: { showgrid: false }, 
-                yaxis: { gridcolor: '#f1f5f9' }
-            }, { responsive: true, displayModeBar: false });
+                textfont: { size: 10, color: '#1e293b', weight: 800 },
+                line: { shape: 'spline', color: '#2563eb', width: 4 },
+                fill: 'tozeroy', fillcolor: 'rgba(37, 99, 235, 0.05)'
+            }], { margin: { t: 30, b: 40, l: 40, r: 20 }, xaxis: {showgrid: false}, yaxis: {gridcolor: '#f1f5f9'}}, {responsive: true, displayModeBar: false});
         }
 
-        function descargarReporteExcel() { /* Se mantiene lógica de descarga anterior */ }
+        // --- FUNCIÓN DE EXPORTACIÓN RESTAURADA ---
+        function descargarReporteExcel() {
+            const m = document.getElementById('sel-mes').value;
+            const fG = document.getElementById('sel-ger').value;
+            
+            const rangoTotal = [...new Set(db.filter(r => (m === 'ALL' || r.m === m)).map(r => r.f))].sort((a,b) => {
+                const pa = a.split('/'), pb = b.split('/');
+                return new Date(pa[2], pa[1]-1, pa[0]) - new Date(pb[2], pb[1]-1, pb[0]);
+            });
+
+            let ags = {};
+            db.filter(r => (m === 'ALL' || r.m === m) && (fG === 'ALL' || r.g === fG)).forEach(r => {
+                if(!ags[r.u]) ags[r.u] = { u: r.u, g: r.g, t: 0, d: {} };
+                ags[r.u].t += r.s;
+                ags[r.u].d[r.f] = (ags[r.u].d[r.f] || 0) + r.s;
+            });
+
+            let csv = "sep=,\nGERENCIA,EJECUTIVO,TOTAL_ACUMULADO_HHMMSS," + rangoTotal.join(",") + "\n";
+            Object.values(ags).sort((a,b)=>b.t-a.t).forEach(a => {
+                let fila = `"${a.g}","${a.u}",${fmtHHMMSS(a.t)}`;
+                rangoTotal.forEach(dia => { fila += `,${a.d[dia] ? fmtHHMMSS(a.d[dia]) : "00:00:00"}`; });
+                csv += fila + "\n";
+            });
+
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `GMT_Reporte_${m}_${fG.replace(/\s+/g, '_')}.csv`;
+            link.click();
+        }
 
         document.getElementById('sel-mes').onchange = () => { updateFilters(); render(); };
         document.getElementById('sel-dia').onchange = render;
